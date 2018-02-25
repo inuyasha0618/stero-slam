@@ -3,8 +3,8 @@ namespace myslam
 {
     Frame::Frame(): id_(-1), time_stamp_(-1), camera_(nullptr) {}
 
-    Frame::Frame(unsigned long id, double time_stamp, Sophus::SE3 T_c_w, Camera::Ptr camera, cv::Mat color, cv::Mat depth):
-    id_(id), time_stamp_(time_stamp), T_c_w_(T_c_w), camera_(camera), color_(color), depth_(depth) {}
+    Frame::Frame(unsigned long id, double time_stamp, Sophus::SE3 T_c_w, Camera::Ptr camera, cv::Mat img_left, cv::Mat img_right):
+    id_(id), time_stamp_(time_stamp), T_c_w_(T_c_w), camera_(camera), img_left_(img_left), img_right_(img_right) {}
 
     Frame::~Frame() {}
 

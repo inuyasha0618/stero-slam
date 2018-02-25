@@ -9,7 +9,7 @@ namespace myslam
         cx_ = Config::getParam<float>("camera.cx");
         cy_ = Config::getParam<float>("camera.cy");
 
-        depth_sacle_ = Config::getParam<float>("camera.depth_scale");
+        base_line_ = Config::getParam<float>("camera.base_line");
 
     }
 

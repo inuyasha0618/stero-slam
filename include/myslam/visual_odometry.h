@@ -26,7 +26,7 @@ namespace myslam
 
         cv::Ptr<cv::ORB> orb_; // orb detector and computer
         vector<cv::Point3f> pts_3d_ref_;
-        vector<cv::KeyPoint> keypoints_curr_;
+        vector<cv::KeyPoint> keypoints_curr_, keypoints_curr_right_;
         cv::Mat descriptors_curr_;
         cv::Mat descriptors_ref_;
         vector<cv::DMatch> features_matches_;
@@ -52,8 +52,7 @@ namespace myslam
         bool addFrame(Frame::Ptr frame);
 
     protected:
-        void extractKeyPoints();
-        void computeDescriptors();
+        void extractKeyPointsAndComputeDescriptors();
         void featrureMatching();
         void poseEstimationPnP();
         void setRef3DPoints();

@@ -2,11 +2,14 @@
 #include <fstream>
 #include <boost/timer.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/viz.hpp>
 
 #include "myslam/config.h"
 #include "myslam/visual_odometry.h"
+
+#define MAX_FRAME 1000
 
 int main ( int argc, char** argv )
 {
@@ -20,55 +23,34 @@ int main ( int argc, char** argv )
     myslam::VisualOdometry::Ptr vo ( new myslam::VisualOdometry );
 
     string dataset_dir = myslam::Config::getParam<string> ( "dataset_dir" );
-    cout<<"dataset: "<<dataset_dir<<endl;
-    ifstream fin ( dataset_dir+"/associate.txt" );
-    if ( !fin )
-    {
-        cout<<"please generate the associate file called associate.txt!"<<endl;
-        return 1;
-    }
-
-    vector<string> rgb_files, depth_files;
-    vector<double> rgb_times, depth_times;
-    while ( !fin.eof() )
-    {
-        string rgb_time, rgb_file, depth_time, depth_file;
-        fin>>rgb_time>>rgb_file>>depth_time>>depth_file;
-        rgb_times.push_back ( atof ( rgb_time.c_str() ) );
-        depth_times.push_back ( atof ( depth_time.c_str() ) );
-        rgb_files.push_back ( dataset_dir+"/"+rgb_file );
-        depth_files.push_back ( dataset_dir+"/"+depth_file );
-
-        if ( fin.good() == false )
-            break;
-    }
 
     myslam::Camera::Ptr camera ( new myslam::Camera );
 
-    // visualization
-    cv::viz::Viz3d vis("Visual Odometry");
-    cv::viz::WCoordinateSystem world_coor(1.0), camera_coor(0.5);
-    cv::Point3d cam_pos( 0, -1.0, -1.0 ), cam_focal_point(0,0,0), cam_y_dir(0,1,0);
-    cv::Affine3d cam_pose = cv::viz::makeCameraPose( cam_pos, cam_focal_point, cam_y_dir );
-    vis.setViewerPose( cam_pose );
+    cv::namedWindow( "Road facing camera", cv::WINDOW_AUTOSIZE );// Create a window for display.
+    cv::namedWindow( "Trajectory", cv::WINDOW_AUTOSIZE );// Create a window for display.
 
-    world_coor.setRenderingProperty(cv::viz::LINE_WIDTH, 2.0);
-    camera_coor.setRenderingProperty(cv::viz::LINE_WIDTH, 1.0);
-    vis.showWidget( "World", world_coor );
-    vis.showWidget( "Camera", camera_coor );
+    char filename_l[100];
+    char filename_r[100];
 
-    cout<<"read total "<<rgb_files.size() <<" entries"<<endl;
-    for ( int i=0; i<rgb_files.size(); i++ )
+    cv::Mat traj = cv::Mat::zeros(600, 600, CV_8UC1);
+
+    for ( int i=0; i<MAX_FRAME; i++ )
     {
-        cv::Mat color = cv::imread ( rgb_files[i] );
-        cv::Mat depth = cv::imread ( depth_files[i], -1 );
-        if ( color.data==nullptr || depth.data==nullptr )
+        sprintf(filename_l, "/home/slam/datasets/kitti/00/image_0/%06d.png", i);
+        sprintf(filename_r, "/home/slam/datasets/kitti/00/image_1/%06d.png", i);
+
+        cout << filename_l << endl;
+
+        cv::Mat img_left = cv::imread(filename_l);
+        cv::Mat img_right = cv::imread (filename_r);
+        if ( img_left.data==nullptr || img_right.data==nullptr ) {
+            cout << "no img data" << endl;
             break;
+        }
         myslam::Frame::Ptr pFrame = myslam::Frame::createFrame();
         pFrame->camera_ = camera;
-        pFrame->color_ = color;
-        pFrame->depth_ = depth;
-        pFrame->time_stamp_ = rgb_times[i];
+        pFrame->img_left_ = img_left;
+        pFrame->img_right_ = img_right;
 
         boost::timer timer;
         vo->addFrame ( pFrame );
@@ -76,24 +58,18 @@ int main ( int argc, char** argv )
 
         if ( vo->state_ == myslam::VisualOdometry::LOST )
             break;
-        Sophus::SE3 Tcw = pFrame->T_c_w_.inverse();
+        Sophus::SE3 Twc = pFrame->T_c_w_.inverse();
 
-        // show the map and the camera pose
-        cv::Affine3d M(
-                cv::Affine3d::Mat3(
-                        Tcw.rotation_matrix()(0,0), Tcw.rotation_matrix()(0,1), Tcw.rotation_matrix()(0,2),
-                        Tcw.rotation_matrix()(1,0), Tcw.rotation_matrix()(1,1), Tcw.rotation_matrix()(1,2),
-                        Tcw.rotation_matrix()(2,0), Tcw.rotation_matrix()(2,1), Tcw.rotation_matrix()(2,2)
-                ),
-                cv::Affine3d::Vec3(
-                        Tcw.translation()(0,0), Tcw.translation()(1,0), Tcw.translation()(2,0)
-                )
-        );
+        int x = int(Twc.translation()(0)) + 300;
+        int y = int(Twc.translation()(2)) + 100;
+        cv::circle(traj, cv::Point(x, y) ,1, CV_RGB(255,0,0), 2);
 
-        cv::imshow("image", color );
+        cv::rectangle( traj, cv::Point(10, 30), cv::Point(550, 50), CV_RGB(0,0,0), CV_FILLED);
+
+        imshow( "Road facing camera", img_left );
+        imshow( "Trajectory", traj );
+
         cv::waitKey(1);
-        vis.setWidgetPose( "Camera", M);
-        vis.spinOnce(1, false);
     }
 
     return 0;

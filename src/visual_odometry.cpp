@@ -34,16 +34,14 @@ namespace myslam
                 state_ = OK;
                 curr_ = ref_ = frame;
                 map_->insertKeyFrame(frame);
-                extractKeyPoints();
-                computeDescriptors();
+                extractKeyPointsAndComputeDescriptors();
                 setRef3DPoints();
                 break;
             }
             case OK:
             {
                 curr_ = frame;
-                extractKeyPoints();
-                computeDescriptors();
+                extractKeyPointsAndComputeDescriptors();
                 featrureMatching();
                 poseEstimationPnP();
                 cout << "num inliers: " << num_inliers_ << endl;
@@ -75,19 +73,68 @@ namespace myslam
         return true;
     }
 
-    void VisualOdometry::extractKeyPoints() {
-        orb_->detect(curr_->color_, keypoints_curr_);
-    }
+    void VisualOdometry::extractKeyPointsAndComputeDescriptors() {
 
-    void VisualOdometry::computeDescriptors() {
-        orb_->compute(curr_->color_, keypoints_curr_, descriptors_curr_);
+        vector<cv::KeyPoint> leftKps;
+        vector<cv::KeyPoint> rightKps;
+
+        orb_->detect(curr_->img_left_, leftKps);
+        orb_->detect(curr_->img_right_, rightKps);
+
+        cv::Mat desLeft, desRight;
+        cv::Mat matchImg;
+
+        orb_->compute(curr_->img_left_, leftKps, desLeft);
+        orb_->compute(curr_->img_right_, rightKps, desRight);
+
+        cv::HammingLUT lut;
+
+        vector<cv::DMatch> matches;
+        int size = desLeft.cols;
+
+        for (int i = 0; i < desLeft.rows; i++) {
+            cv::KeyPoint left_kp_i = leftKps.at(i);
+            float left_kp_i_y = left_kp_i.pt.y;
+
+            int trainId = -1;
+            int bestDistance = 99999999;
+
+            for (int j = 0; j < desRight.rows; j++) {
+                cv::KeyPoint right_kp_j = rightKps.at(j);
+                float right_kp_j_y = right_kp_j.pt.y;
+
+                if (abs(left_kp_i_y - right_kp_j_y) > 2) continue;
+
+                int distance = lut(desLeft.ptr<uchar>(i), desRight.ptr<uchar>(j), size);
+                if (distance < bestDistance) {
+                    trainId = j;
+                    bestDistance = distance;
+                }
+            }
+
+            if (trainId != -1) {
+                matches.push_back(cv::DMatch(i, trainId, bestDistance));
+            }
+        }
+
+        keypoints_curr_.clear();
+        keypoints_curr_right_.clear();
+        descriptors_curr_ = cv::Mat();
+        for (cv::DMatch& m : matches) {
+            keypoints_curr_.push_back(leftKps.at(m.queryIdx));
+            keypoints_curr_right_.push_back(rightKps.at(m.trainIdx));
+            descriptors_curr_.push_back(desLeft.row(m.queryIdx));
+        }
+
+        cout << "keypoints_curr_ size: " << keypoints_curr_.size() << endl;
+        cout << "descriptors_curr_: " << descriptors_curr_.rows << " " << descriptors_curr_.cols << endl;
     }
 
     void VisualOdometry::featrureMatching() {
         vector<cv::DMatch> matches;
         cv::BFMatcher matcher(cv::NORM_HAMMING);
         matcher.match(descriptors_ref_, descriptors_curr_, matches);
-
+        cout << "matches: " << matches.size() << endl;
         double min_dis = 999999999.0;
 
         for (cv::DMatch& match : matches) {
@@ -129,54 +176,54 @@ namespace myslam
         );
 
         //　定义块求解器类型
-        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,2>> Block;
-        // 选择块求解器所使用的求解方式，稠密还是稀疏
-        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
-        // 实例化一个块求解器指针
-        Block* blockSolverPtr = new Block(linearSolver);
-
-        //　设置所用优化算法
-        g2o::OptimizationAlgorithmLevenberg* optiAlgorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolverPtr);
-
-        //　创建优化问题
-        g2o::SparseOptimizer optimizer;
-
-        //　给优化问题设置上刚刚选好的优化算法
-        optimizer.setAlgorithm(optiAlgorithm);
-
-        // 下面就是给优化问题添加顶点和边
-
-        // 创建顶点,　该问题就一个顶点，即相机的相对参考帧的位姿
-        g2o::VertexSE3Expmap* pose = new g2o::VertexSE3Expmap();
-        pose->setId(0);
-        // 设置优化初始值
-        pose->setEstimate(g2o::SE3Quat(T_c_r_esti_.rotation_matrix(), T_c_r_esti_.translation()));
-
-        // 将该点加入优化问题中
-        optimizer.addVertex(pose);
-
-        // 添加边
-        for (int i = 0; i < inliers.rows; i++) {
-            // 创建边
-            EdgeProjXYZ2UVPoseOnly* edge = new EdgeProjXYZ2UVPoseOnly();
-            edge->setId(i);
-            edge->setVertex(0, pose);
-
-            int index = inliers.at<int>(i, 0);
-
-            edge->setMeasurement(Eigen::Vector2d(pts2d[index].x, pts2d[index].y));
-            edge->camera_ = curr_->camera_.get();
-            edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
-            edge->setInformation(Eigen::Matrix2d::Identity());
-
-            optimizer.addEdge(edge);
-        }
-
-        //　开始优化
-        optimizer.initializeOptimization();
-        optimizer.optimize(10);
-
-        T_c_r_esti_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
+//        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,2>> Block;
+//        // 选择块求解器所使用的求解方式，稠密还是稀疏
+//        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
+//        // 实例化一个块求解器指针
+//        Block* blockSolverPtr = new Block(linearSolver);
+//
+//        //　设置所用优化算法
+//        g2o::OptimizationAlgorithmLevenberg* optiAlgorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolverPtr);
+//
+//        //　创建优化问题
+//        g2o::SparseOptimizer optimizer;
+//
+//        //　给优化问题设置上刚刚选好的优化算法
+//        optimizer.setAlgorithm(optiAlgorithm);
+//
+//        // 下面就是给优化问题添加顶点和边
+//
+//        // 创建顶点,　该问题就一个顶点，即相机的相对参考帧的位姿
+//        g2o::VertexSE3Expmap* pose = new g2o::VertexSE3Expmap();
+//        pose->setId(0);
+//        // 设置优化初始值
+//        pose->setEstimate(g2o::SE3Quat(T_c_r_esti_.rotation_matrix(), T_c_r_esti_.translation()));
+//
+//        // 将该点加入优化问题中
+//        optimizer.addVertex(pose);
+//
+//        // 添加边
+//        for (int i = 0; i < inliers.rows; i++) {
+//            // 创建边
+//            EdgeProjXYZ2UVPoseOnly* edge = new EdgeProjXYZ2UVPoseOnly();
+//            edge->setId(i);
+//            edge->setVertex(0, pose);
+//
+//            int index = inliers.at<int>(i, 0);
+//
+//            edge->setMeasurement(Eigen::Vector2d(pts2d[index].x, pts2d[index].y));
+//            edge->camera_ = curr_->camera_.get();
+//            edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
+//            edge->setInformation(Eigen::Matrix2d::Identity());
+//
+//            optimizer.addEdge(edge);
+//        }
+//
+//        //　开始优化
+//        optimizer.initializeOptimization();
+//        optimizer.optimize(10);
+//
+//        T_c_r_esti_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
     }
 
     void VisualOdometry::setRef3DPoints() {
@@ -185,7 +232,7 @@ namespace myslam
 
         for (size_t i = 0; i < keypoints_curr_.size(); i++) {
             //　查询深度
-            double d = ref_->findDepth(keypoints_curr_[i]);
+            double d = ref_->findDepth(keypoints_curr_[i], keypoints_curr_right_[i]);
             if (d > 0) {
                 Eigen::Vector3d p_cam = ref_->camera_->pixel2camera(Eigen::Vector2d(keypoints_curr_[i].pt.x, keypoints_curr_[i].pt.y), d);
                 pts_3d_ref_.push_back(cv::Point3f(p_cam(0, 0), p_cam(1, 0), p_cam(2, 0)));
