@@ -14,8 +14,7 @@ namespace myslam
         double time_stamp_;
         Sophus::SE3 T_c_w_;
         Camera::Ptr camera_;
-        cv::Mat color_, depth_;
-
+        cv::Mat img_left_, img_right_;
     public:
         Frame();
 
@@ -25,7 +24,7 @@ namespace myslam
 
         static Frame::Ptr createFrame();
 
-        double findDepth(const cv::KeyPoint& kp);
+        double findDepth(const cv::KeyPoint& kp_l, const cv::KeyPoint& kp_r);
 
         Eigen::Vector3d getCameraCenter() const;
 

@@ -13,28 +13,18 @@ namespace myslam
         return Frame::Ptr(new Frame(id++));
     }
 
-    double Frame::findDepth(const cv::KeyPoint& kp) {
-        int x = cvRound(kp.pt.x);
-        int y = cvRound(kp.pt.y);
+    double Frame::findDepth(const cv::KeyPoint& kp_l, const cv::KeyPoint& kp_r) {
+        int u_l = cvRound(kp_l.pt.x);
+        int u_r = cvRound(kp_r.pt.x);
 
+        int disparity = u_l - u_r;
 
-        ushort d = depth_.ptr<ushort>(y)[x];
-
-        if (d != 0) {
-            return double(d) / camera_->depth_sacle_;
+        if (disparity !=0) {
+            return camera_->fx_ * camera_->base_line_ / disparity;
         } else {
-            int dx[] = {-1, 0, 1, 0};
-            int dy[] = {0, -1, 0, 1};
-
-            for (int i = 0; i < 4; i++) {
-                d = depth_.ptr<ushort>(y + dy[i])[x + dx[i]];
-                if (d != 0) {
-                    return double(d) / camera_->depth_sacle_;
-                }
-            }
-
             return -1.0;
         }
+
     }
 
     Eigen::Vector3d Frame::getCameraCenter() const {
@@ -48,6 +38,6 @@ namespace myslam
         }
         Eigen::Vector2d p_pix = camera_->world2pixel(p_w, T_c_w_);
 
-        return  p_pix(0) > 0 && p_pix(1) > 0 && p_pix(0) < color_.cols && p_pix(1) < color_.rows;
+        return  p_pix(0) > 0 && p_pix(1) > 0 && p_pix(0) < img_left_.cols && p_pix(1) < img_left_.rows;
     }
 }

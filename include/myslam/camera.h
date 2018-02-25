@@ -8,7 +8,7 @@ namespace myslam
     class Camera {
     public:
         typedef std::shared_ptr<Camera> Ptr;
-        float fx_, fy_, cx_, cy_, depth_sacle_;
+        float fx_, fy_, cx_, cy_, depth_sacle_, base_line_;
 
         Camera();
 
