@@ -1,16 +1,15 @@
 %YAML:1.0
 # data
-# the tum dataset directory, change it to yours!
-dataset_dir: /home/slam/datasets/rgbd_dataset_freiburg1_xyz
+# the kitti dataset directory, change it to yours!
+dataset_dir: /home/slam/datasets/kitti/00
+ground_truth_pose: /home/slam/datasets/kitti/ground-truth-poses/poses/00.txt
 
 # camera intrinsics
 # fr1
-camera.fx: 517.3
-camera.fy: 516.5
-camera.cx: 325.1
-camera.cy: 249.7
-
-camera.depth_scale: 5000
+camera.fx: 7.188560000000e+02
+camera.fy: 7.188560000000e+02
+camera.cx: 6.071928000000e+02
+camera.cy: 1.852157000000e+02
 
 # VO paras
 number_of_features: 500

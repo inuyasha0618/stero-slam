@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(RGBD-slam-v2)
+project(stero-slam)
 
 SET(CMAKE_CXX_COMPILER "g++")
 SET(CMAKE_BUILD_TYPE "Debug")
