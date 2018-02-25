@@ -1,0 +1,8 @@
+.idea/
+bin/
+cmake-build-debug/
+CMakeLists.txt.user
+
+lib/
+
+build/

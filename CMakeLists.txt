@@ -1,0 +1,44 @@
+cmake_minimum_required(VERSION 2.8)
+project(RGBD-slam-v2)
+
+SET(CMAKE_CXX_COMPILER "g++")
+SET(CMAKE_BUILD_TYPE "Debug")
+SET(CMAKE_CXX_FLAGS "-std=c++11")
+
+SET(EXECUTABLE_OUTPUT_PATH  ${PROJECT_SOURCE_DIR}/bin)
+SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/lib)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
+
+#Eigen
+include_directories("/usr/include/eigen3")
+
+#PCL
+FIND_PACKAGE(PCL REQUIRED)
+list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
+
+ADD_DEFINITIONS(${PCL_DEFINITIONS})
+INCLUDE_DIRECTORIES(${PCL_INCLUDE_DIRS})
+LINK_LIBRARIES(${PCL_LIBRARY_DIRS})
+
+#OpenCV
+FIND_PACKAGE(OpenCV 3 REQUIRED)
+
+#Sophus
+set(SOPHUS_LIBS /home/slam/Sophus/libSophus.so)
+include_directories(/home/slam/Sophus)
+
+#G2O
+find_package(G2O REQUIRED)
+include_directories(${G2O_INCLUDE_DIRS})
+
+set(THIRD_PARTY_LIBS
+        ${OpenCV_LIBS}
+        ${SOPHUS_LIBS}
+        g2o_core g2o_stuff g2o_types_sba
+        )
+
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include)
+ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src)
+ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/test)
+
