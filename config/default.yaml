@@ -6,10 +6,12 @@ ground_truth_pose: /home/slam/datasets/kitti/ground-truth-poses/poses/00.txt
 
 # camera intrinsics
 # fr1
-camera.fx: 7.188560000000e+02
-camera.fy: 7.188560000000e+02
-camera.cx: 6.071928000000e+02
-camera.cy: 1.852157000000e+02
+camera.fx: 718.856
+camera.fy: 718.856
+camera.cx: 607.1928
+camera.cy: 185.2157
+
+camera.base_line: 0.573
 
 # VO paras
 number_of_features: 500

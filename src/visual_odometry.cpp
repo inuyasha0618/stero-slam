@@ -133,6 +133,7 @@ namespace myslam
     void VisualOdometry::featrureMatching() {
         vector<cv::DMatch> matches;
         cv::BFMatcher matcher(cv::NORM_HAMMING);
+        cout << "descriptors_ref rows: " << descriptors_ref_.rows << endl;
         matcher.match(descriptors_ref_, descriptors_curr_, matches);
         cout << "matches: " << matches.size() << endl;
         double min_dis = 999999999.0;
@@ -237,6 +238,7 @@ namespace myslam
                 Eigen::Vector3d p_cam = ref_->camera_->pixel2camera(Eigen::Vector2d(keypoints_curr_[i].pt.x, keypoints_curr_[i].pt.y), d);
                 pts_3d_ref_.push_back(cv::Point3f(p_cam(0, 0), p_cam(1, 0), p_cam(2, 0)));
                 descriptors_ref_.push_back(descriptors_curr_.row(i));
+                cout << "pushed" << endl;
             }
 
         }

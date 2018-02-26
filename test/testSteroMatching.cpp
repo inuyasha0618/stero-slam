@@ -68,6 +68,13 @@ int main ( int argc, char** argv )
         }
     }
 
+    cv::Mat desLeft_filtered;
+    vector<cv::KeyPoint> leftKps_filtered;
+    for (cv::DMatch& m: matches) {
+        desLeft_filtered.push_back(desLeft.row(m.queryIdx));
+        leftKps_filtered.push_back(leftKps.at(m.queryIdx));
+    }
+
 //    cv::BFMatcher matcher(cv::NORM_HAMMING);
 //    vector<cv::DMatch> matches;
 //
@@ -82,7 +89,22 @@ int main ( int argc, char** argv )
     cv::imshow("matches", matchImg);
     cv::waitKey(0);
 
+    // 下面用这个自己算出的matches与第二张图的左视图进行匹配，看能否匹配成功
+    string leftImgPath_2 = dataset_dir + "image_0/000001.png";
+    cv::Mat leftImg2 = cv::imread(leftImgPath_2);
+    vector<cv::KeyPoint> leftKps2;
+    cv::Mat desLeft2;
+    orb->detect(leftImg2, leftKps2);
+    orb->compute(leftImg2, leftKps2, desLeft2);
 
+    cv::BFMatcher matcher(cv::NORM_HAMMING);
+    vector<cv::DMatch> matches1_2;
+
+    matcher.match(desLeft_filtered, desLeft2, matches1_2);
+    cv::Mat matches2_img;
+    cv::drawMatches(leftImg, leftKps_filtered, leftImg2, leftKps2, matches1_2, matches2_img);
+    cv::imshow("1 to 2", matches2_img);
+    cv::waitKey(0);
 
     return 0;
 }
