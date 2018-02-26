@@ -14,16 +14,12 @@ namespace myslam
     }
 
     double Frame::findDepth(const cv::KeyPoint& kp_l, const cv::KeyPoint& kp_r) {
-        Eigen::Vector3d pc_left = camera_->pixel2camera(Eigen::Vector2d(kp_l.pt.x, kp_l.pt.y));
-        Eigen::Vector3d pc_right = camera_->pixel2camera(Eigen::Vector2d(kp_r.pt.x, kp_r.pt.y));
 
-        double disparity = pc_left(0) - pc_right(0);
-
-        cout << "disparity: " << disparity << endl;
+        double disparity = kp_l.pt.x - kp_r.pt.x;
 
         if (disparity > 0) {
 
-            return camera_->base_line_ / disparity;
+            return camera_->fx_ * camera_->base_line_ / disparity;
         } else {
             return -1.0;
         }
