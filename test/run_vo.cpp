@@ -32,7 +32,7 @@ int main ( int argc, char** argv )
     char filename_l[100];
     char filename_r[100];
 
-    cv::Mat traj = cv::Mat::zeros(600, 600, CV_8UC1);
+    cv::Mat traj = cv::Mat::zeros(600, 600, CV_8UC3);
 
     for ( int i=0; i<MAX_FRAME; i++ )
     {
@@ -62,6 +62,13 @@ int main ( int argc, char** argv )
 
         int x = int(Twc.translation()(0)) + 300;
         int y = int(Twc.translation()(2)) + 100;
+
+        if (i == 1) {
+            cout << "第2帧x: " << x << " y: " << y << endl;
+            cv::waitKey(0);
+        }
+
+        cout << "x: " << x << "y: " << y << endl;
         cv::circle(traj, cv::Point(x, y) ,1, CV_RGB(255,0,0), 2);
 
         cv::rectangle( traj, cv::Point(10, 30), cv::Point(550, 50), CV_RGB(0,0,0), CV_FILLED);
