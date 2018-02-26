@@ -34,6 +34,10 @@ int main ( int argc, char** argv )
 
     cv::Mat traj = cv::Mat::zeros(600, 600, CV_8UC3);
 
+    string ground_truth_pose_dir = myslam::Config::getParam<string> ("ground_truth_pose");
+
+    ifstream ground_truth_pose(ground_truth_pose_dir);
+
     for ( int i=0; i<MAX_FRAME; i++ )
     {
         sprintf(filename_l, "/home/slam/datasets/kitti/00/image_0/%06d.png", i);
@@ -63,21 +67,37 @@ int main ( int argc, char** argv )
         int x = int(Twc.translation()(0)) + 300;
         int y = int(Twc.translation()(2)) + 100;
 
-        if (i == 1) {
-            cout << "第2帧x: " << x << " y: " << y << endl;
-            cv::waitKey(0);
-        }
-
         cout << "x: " << x << "y: " << y << endl;
         cv::circle(traj, cv::Point(x, y) ,1, CV_RGB(255,0,0), 2);
 
-        cv::rectangle( traj, cv::Point(10, 30), cv::Point(550, 50), CV_RGB(0,0,0), CV_FILLED);
+        if (ground_truth_pose.is_open()) {
+            string line;
+            getline(ground_truth_pose, line);
+            istringstream in(line);
+            double tmp, pose_x, pose_z;
+            for (int k = 0; k < 12; k++) {
+                in >> tmp;
+                if (k == 3) pose_x = tmp;
+                if (k == 11) pose_z = tmp;
+            }
+
+            int true_x = int(pose_x) + 300;
+            int true_y = int(pose_z) + 100;
+
+            cv::circle(traj, cv::Point(true_x, true_y) ,1, CV_RGB(0,255,0), 2);
+        } else {
+            cout << "Unable to open file" << endl;
+        }
+
+//        cv::rectangle( traj, cv::Point(10, 30), cv::Point(550, 50), CV_RGB(255,255,255), CV_FILLED);
 
         imshow( "Road facing camera", img_left );
         imshow( "Trajectory", traj );
 
         cv::waitKey(1);
     }
+
+    ground_truth_pose.close();
 
     return 0;
 }
