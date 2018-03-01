@@ -173,58 +173,58 @@ namespace myslam
         );
 
 
-//        cout << "优化前　rotation: \n" << T_c_r_esti_.rotation_matrix() << "\n translation: \n" << T_c_r_esti_.translation().transpose() << endl;
-//
-//        //　定义块求解器类型
-//        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,2>> Block;
-//        // 选择块求解器所使用的求解方式，稠密还是稀疏
-//        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
-//        // 实例化一个块求解器指针
-//        Block* blockSolverPtr = new Block(linearSolver);
-//
-//        //　设置所用优化算法
-//        g2o::OptimizationAlgorithmLevenberg* optiAlgorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolverPtr);
-//
-//        //　创建优化问题
-//        g2o::SparseOptimizer optimizer;
-//
-//        //　给优化问题设置上刚刚选好的优化算法
-//        optimizer.setAlgorithm(optiAlgorithm);
-//
-//        // 下面就是给优化问题添加顶点和边
-//
-//        // 创建顶点,　该问题就一个顶点，即相机的相对参考帧的位姿
-//        g2o::VertexSE3Expmap* pose = new g2o::VertexSE3Expmap();
-//        pose->setId(0);
-//        // 设置优化初始值
-//        pose->setEstimate(g2o::SE3Quat(T_c_r_esti_.rotation_matrix(), T_c_r_esti_.translation()));
-////        pose->setEstimate(g2o::SE3Quat(Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero()));
-//
-//        // 将该点加入优化问题中
-//        optimizer.addVertex(pose);
+        cout << "优化前　rotation: \n" << T_c_r_esti_.rotation_matrix() << "\n translation: \n" << T_c_r_esti_.translation().transpose() << endl;
 
-        // 添加边
-//        for (int i = 0; i < inliers.rows; i++) {
-//            // 创建边
-////            EdgeProjXYZ2UVPoseOnly* edge = new EdgeProjXYZ2UVPoseOnly();
-//            EdgeProjXYZ2SteroUVPoseOnly* edge = new EdgeProjXYZ2SteroUVPoseOnly();
-//            edge->setId(i);
-//            edge->setVertex(0, pose);
-//
-//            int index = inliers.at<int>(i, 0);
-//
-//            edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
-////            edge->setMeasurement(Eigen::Vector2d(pts2d[index].x, pts2d[index].y));
-//            edge->camera_ = curr_->camera_.get();
-//            edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
-//            edge->setInformation(Eigen::Matrix3d::Identity());
-////            edge->setInformation(Eigen::Matrix2d::Identity());
-//
-////            cout << "左视图特征点坐标：" << pts2d[index].x << " " << pts2d[index].y << endl;
-////            cout << "右视图特征点坐标：" << pts2d_r[index].x << " " << pts2d_r[index].y << endl;
-//
-//            optimizer.addEdge(edge);
-//        }
+        //　定义块求解器类型
+        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,2>> Block;
+        // 选择块求解器所使用的求解方式，稠密还是稀疏
+        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
+        // 实例化一个块求解器指针
+        Block* blockSolverPtr = new Block(linearSolver);
+
+        //　设置所用优化算法
+        g2o::OptimizationAlgorithmLevenberg* optiAlgorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolverPtr);
+
+        //　创建优化问题
+        g2o::SparseOptimizer optimizer;
+
+        //　给优化问题设置上刚刚选好的优化算法
+        optimizer.setAlgorithm(optiAlgorithm);
+
+        // 下面就是给优化问题添加顶点和边
+
+        // 创建顶点,　该问题就一个顶点，即相机的相对参考帧的位姿
+        g2o::VertexSE3Expmap* pose = new g2o::VertexSE3Expmap();
+        pose->setId(0);
+        // 设置优化初始值
+        pose->setEstimate(g2o::SE3Quat(T_c_r_esti_.rotation_matrix(), T_c_r_esti_.translation()));
+//        pose->setEstimate(g2o::SE3Quat(Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero()));
+
+        // 将该点加入优化问题中
+        optimizer.addVertex(pose);
+
+//         添加边
+        for (int i = 0; i < inliers.rows; i++) {
+            // 创建边
+//            EdgeProjXYZ2UVPoseOnly* edge = new EdgeProjXYZ2UVPoseOnly();
+            EdgeProjXYZ2SteroUVPoseOnly* edge = new EdgeProjXYZ2SteroUVPoseOnly();
+            edge->setId(i);
+            edge->setVertex(0, pose);
+
+            int index = inliers.at<int>(i, 0);
+
+            edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
+//            edge->setMeasurement(Eigen::Vector2d(pts2d[index].x, pts2d[index].y));
+            edge->camera_ = curr_->camera_.get();
+            edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
+            edge->setInformation(Eigen::Matrix3d::Identity());
+//            edge->setInformation(Eigen::Matrix2d::Identity());
+
+//            cout << "左视图特征点坐标：" << pts2d[index].x << " " << pts2d[index].y << endl;
+//            cout << "右视图特征点坐标：" << pts2d_r[index].x << " " << pts2d_r[index].y << endl;
+
+            optimizer.addEdge(edge);
+        }
 
 //        double fx = curr_->camera_->fx_;
 //        double fy = curr_->camera_->fy_;
@@ -255,14 +255,14 @@ namespace myslam
 //            if(edge->isDepthPositive())
 //            optimizer.addEdge(edge);
 //        }
-//
-//        //　开始优化
-//        optimizer.setVerbose(true);
-//        optimizer.initializeOptimization();
-//        optimizer.optimize(20);
-//
-//        T_c_r_esti_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
-//        cout << "优化后　rotation: \n" << T_c_r_esti_.rotation_matrix() << "\n translation: \n" << T_c_r_esti_.translation().transpose() << endl;
+
+        //　开始优化
+        optimizer.setVerbose(true);
+        optimizer.initializeOptimization();
+        optimizer.optimize(10);
+
+        T_c_r_esti_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
+        cout << "优化后　rotation: \n" << T_c_r_esti_.rotation_matrix() << "\n translation: \n" << T_c_r_esti_.translation().transpose() << endl;
 //        cv::waitKey(0);
 
     }
