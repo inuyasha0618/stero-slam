@@ -38,32 +38,18 @@ namespace myslam
         Camera* camera_;
     };
 
-    class EdgeStereoSE3ProjectXYZOnlyPose : public g2o::BaseUnaryEdge<3, Eigen::Vector3d, g2o::VertexSE3Expmap> {
+    class EdgeProjXYZ2SteroUVRotOnly: public g2o::BaseUnaryEdge<3, Eigen::Vector3d, g2o::VertexSE3Expmap>
+    {
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-        EdgeStereoSE3ProjectXYZOnlyPose() {}
+        virtual void computeError();
+        virtual void linearizeOplus();
 
         virtual bool read(std::istream& in) {}
         virtual bool write(std::ostream& os) const {}
 
-        void computeError() {
-            const g2o::VertexSE3Expmap *v1 = static_cast<const g2o::VertexSE3Expmap *>(_vertices[0]);
-            Eigen::Vector3d obs(_measurement);
-            _error = obs - cam_project(v1->estimate().map(Xw));
-        }
-
-        bool isDepthPositive() {
-            const g2o::VertexSE3Expmap *v1 = static_cast<const g2o::VertexSE3Expmap *>(_vertices[0]);
-            return (v1->estimate().map(Xw))(2) > 0;
-        }
-
-        virtual void linearizeOplus();
-
-        Eigen::Vector3d cam_project(const Eigen::Vector3d &trans_xyz) const;
-
-        Eigen::Vector3d Xw;
-        double fx, fy, cx, cy, bf;
+        Eigen::Vector3d point_;
+        Camera* camera_;
     };
 
 }
