@@ -106,7 +106,6 @@ namespace myslam
 
         // 可以把keypoints_curr过滤好之后在计算描述子，这样，计算量小了，描述子也不用过滤了
         orb_->compute(curr_->img_left_, keypoints_curr_, descriptors_curr_);
-
     }
 
     void VisualOdometry::featrureMatching() {
@@ -143,20 +142,6 @@ namespace myslam
             pts3d.push_back(pts_3d_ref_[match.queryIdx]);
             pts2d.push_back(keypoints_curr_[match.trainIdx].pt);
             pts2d_r.push_back(keypoints_curr_right_[match.trainIdx].pt);
-
-//            cv::Mat left_img_show, right_img_show;
-//            left_matched_kps.clear();
-//            right_mathed_kps.clear();
-//            left_matched_kps.push_back(keypoints_curr_[match.trainIdx]);
-//            right_mathed_kps.push_back(keypoints_curr_right_[match.trainIdx]);
-//
-//            cv::drawKeypoints(curr_->img_left_, left_matched_kps, left_img_show);
-//            cv::drawKeypoints(curr_->img_right_, right_mathed_kps, right_img_show);
-//
-//            cv::imshow("left matched kps", left_img_show);
-//            cv::imshow("right matched kps", right_img_show);
-//
-//            cv::waitKey(0);
         }
 
 
@@ -173,10 +158,8 @@ namespace myslam
         );
 
 
-        cout << "优化前　rotation: \n" << T_c_r_esti_.rotation_matrix() << "\n translation: \n" << T_c_r_esti_.translation().transpose() << endl;
-
         //　定义块求解器类型
-        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,2>> Block;
+        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,3>> Block;
         // 选择块求解器所使用的求解方式，稠密还是稀疏
         Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
         // 实例化一个块求解器指针
@@ -198,15 +181,13 @@ namespace myslam
         pose->setId(0);
         // 设置优化初始值
         pose->setEstimate(g2o::SE3Quat(T_c_r_esti_.rotation_matrix(), T_c_r_esti_.translation()));
-//        pose->setEstimate(g2o::SE3Quat(Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero()));
 
         // 将该点加入优化问题中
         optimizer.addVertex(pose);
 
-//         添加边
+        // 添加边
         for (int i = 0; i < inliers.rows; i++) {
             // 创建边
-//            EdgeProjXYZ2UVPoseOnly* edge = new EdgeProjXYZ2UVPoseOnly();
             EdgeProjXYZ2SteroUVPoseOnly* edge = new EdgeProjXYZ2SteroUVPoseOnly();
             edge->setId(i);
             edge->setVertex(0, pose);
@@ -214,56 +195,20 @@ namespace myslam
             int index = inliers.at<int>(i, 0);
 
             edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
-//            edge->setMeasurement(Eigen::Vector2d(pts2d[index].x, pts2d[index].y));
             edge->camera_ = curr_->camera_.get();
             edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
             edge->setInformation(Eigen::Matrix3d::Identity());
-//            edge->setInformation(Eigen::Matrix2d::Identity());
-
-//            cout << "左视图特征点坐标：" << pts2d[index].x << " " << pts2d[index].y << endl;
-//            cout << "右视图特征点坐标：" << pts2d_r[index].x << " " << pts2d_r[index].y << endl;
 
             optimizer.addEdge(edge);
         }
 
-//        double fx = curr_->camera_->fx_;
-//        double fy = curr_->camera_->fy_;
-//        double cx = curr_->camera_->cx_;
-//        double cy = curr_->camera_->cy_;
-//        double bf = curr_->camera_->base_line_;
-//
-//
-//        for (int i = 0; i < inliers.rows; i++) {
-//            // 创建边
-//            EdgeStereoSE3ProjectXYZOnlyPose* edge = new EdgeStereoSE3ProjectXYZOnlyPose();
-//            edge->setId(i);
-//            edge->setVertex(0, pose);
-//
-//            int index = inliers.at<int>(i, 0);
-//
-//            edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
-//
-//            edge->fx = fx;
-//            edge->fy = fy;
-//            edge->cx = cx;
-//            edge->cy = cy;
-//            edge->bf = bf;
-//            edge->Xw = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
-//
-//            edge->setInformation(Eigen::Matrix3d::Identity());
-//
-//            if(edge->isDepthPositive())
-//            optimizer.addEdge(edge);
-//        }
 
         //　开始优化
-        optimizer.setVerbose(true);
+        optimizer.setVerbose(false);
         optimizer.initializeOptimization();
-        optimizer.optimize(10);
+        optimizer.optimize(3);
 
         T_c_r_esti_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
-        cout << "优化后　rotation: \n" << T_c_r_esti_.rotation_matrix() << "\n translation: \n" << T_c_r_esti_.translation().transpose() << endl;
-//        cv::waitKey(0);
 
     }
 

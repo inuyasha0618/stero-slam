@@ -100,7 +100,7 @@ int main ( int argc, char** argv )
     }
 
     ground_truth_pose.close();
-    cv::imwrite("./v1.1.png", traj);
+    cv::imwrite("./v1.1-no-g2o.png", traj);
 
     return 0;
 }
