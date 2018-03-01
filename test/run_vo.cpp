@@ -60,8 +60,10 @@ int main ( int argc, char** argv )
         vo->addFrame ( pFrame );
         cout<<"VO costs time: "<<timer.elapsed()<<endl;
 
-        if ( vo->state_ == myslam::VisualOdometry::LOST )
+        if ( vo->state_ == myslam::VisualOdometry::LOST ) {
+            cout << "VO has lost" << endl;
             break;
+        }
         Sophus::SE3 Twc = pFrame->T_c_w_.inverse();
 
         int x = int(Twc.translation()(0)) + 300;
