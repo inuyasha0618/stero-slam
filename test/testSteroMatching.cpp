@@ -46,6 +46,7 @@ int main ( int argc, char** argv )
     for (int i = 0; i < desLeft.rows; i++) {
         cv::KeyPoint left_kp_i = leftKps.at(i);
         float left_kp_i_y = left_kp_i.pt.y;
+        float left_kp_i_x = left_kp_i.pt.x;
 
         int trainId = -1;
         int bestDistance = 99999999;
@@ -53,8 +54,10 @@ int main ( int argc, char** argv )
         for (int j = 0; j < desRight.rows; j++) {
             cv::KeyPoint right_kp_j = rightKps.at(j);
             float right_kp_j_y = right_kp_j.pt.y;
+            float right_kp_j_x = right_kp_j.pt.x;
 
-            if (abs(left_kp_i_y - right_kp_j_y) > 2) continue;
+//            if (abs(left_kp_i_y - right_kp_j_y) > 2) continue;
+            if (abs(left_kp_i_y - right_kp_j_y) > 2 || right_kp_j_x > left_kp_i_x) continue;
 
             int distance = lut(desLeft.ptr<uchar>(i), desRight.ptr<uchar>(j), size);
             if (distance < bestDistance) {

@@ -9,7 +9,7 @@
 #include "myslam/config.h"
 #include "myslam/visual_odometry.h"
 
-#define MAX_FRAME 1000
+#define MAX_FRAME 2000
 
 int main ( int argc, char** argv )
 {
@@ -98,6 +98,7 @@ int main ( int argc, char** argv )
     }
 
     ground_truth_pose.close();
+    cv::imwrite("./v1.1.png", traj);
 
     return 0;
 }

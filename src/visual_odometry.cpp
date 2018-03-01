@@ -53,9 +53,9 @@ namespace myslam
                     setRef3DPoints();
                     num_lost_ = 0;
 
-                    if (checkKeyFrame()) {
-                        addKeyFrame();
-                    }
+//                    if (checkKeyFrame()) {
+//                        addKeyFrame();
+//                    }
                 } else {
                     num_lost_++;
                     if (num_lost_ > max_num_lost_) {
