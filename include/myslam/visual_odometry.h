@@ -12,6 +12,7 @@ namespace myslam
     class VisualOdometry
     {
     public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
         typedef shared_ptr<VisualOdometry> Ptr;
         enum VOstate {
             INITIALIZING=-1,

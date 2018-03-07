@@ -6,15 +6,19 @@
 
 namespace myslam
 {
+    class Feature;
     class Frame
     {
     public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
         typedef std::shared_ptr<Frame> Ptr;
         unsigned long id_; // 帧的id
         double time_stamp_;
         Sophus::SE3 T_c_w_;
         Camera::Ptr camera_;
         cv::Mat img_left_, img_right_;
+        vector<shared_ptr<Feature>> leftFeatures_;                // 左视图的features
+
     public:
         Frame();
 
