@@ -53,6 +53,9 @@ namespace myslam
         bool addFrame(Frame::Ptr frame);
 
     protected:
+        void addStereoMapPoints(Frame frame); //　通过左右目的视差，创建３维地图点，并且关联到左视图的features上
+        void featureDetection(Frame frame); // 提取frame的左视图的features
+        void stereoMatching(Frame frame);    // 左右目匹配，同时找出视差
         void extractKeyPointsAndComputeDescriptors();
         void featrureMatching();
         void poseEstimationPnP();

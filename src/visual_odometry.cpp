@@ -74,6 +74,10 @@ namespace myslam
         return true;
     }
 
+    void VisualOdometry::addStereoMapPoints(Frame frame) {
+//        curr_->
+    }
+
     void VisualOdometry::extractKeyPointsAndComputeDescriptors() {
 
         vector<cv::KeyPoint> leftKps;
@@ -159,23 +163,6 @@ namespace myslam
                 Eigen::Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0), tvec.at<double>(2, 0))
         );
 
-
-//        //　定义块求解器类型
-//        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,3>> Block;
-//        // 选择块求解器所使用的求解方式，稠密还是稀疏
-//        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
-//        // 实例化一个块求解器指针
-//        Block* blockSolverPtr = new Block(linearSolver);
-//
-//        //　设置所用优化算法
-//        g2o::OptimizationAlgorithmLevenberg* optiAlgorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolverPtr);
-//
-//        //　创建优化问题
-//        g2o::SparseOptimizer optimizer;
-//
-//        //　给优化问题设置上刚刚选好的优化算法
-//        optimizer.setAlgorithm(optiAlgorithm);
-
         // g2o初始化
         g2o::SparseOptimizer optimizer;
 
@@ -225,30 +212,6 @@ namespace myslam
 //            rk->setDelta( delta );
 
             optimizer.addEdge(edge);
-
-//            if (pts2d[index].x - pts2d_r[index].x <= curr_->camera_->fx_ / 30000) {
-//                EdgeProjXYZ2SteroUVRotOnly* edge = new EdgeProjXYZ2SteroUVRotOnly();
-//                edge->setId(i);
-//                edge->setVertex(0, pose);
-//
-//                edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
-//                edge->camera_ = curr_->camera_.get();
-//                edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
-//                edge->setInformation(Eigen::Matrix3d::Identity());
-//
-//                optimizer.addEdge(edge);
-//            } else {
-//                EdgeProjXYZ2SteroUVPoseOnly* edge = new EdgeProjXYZ2SteroUVPoseOnly();
-//                edge->setId(i);
-//                edge->setVertex(0, pose);
-//
-//                edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
-//                edge->camera_ = curr_->camera_.get();
-//                edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
-//                edge->setInformation(Eigen::Matrix3d::Identity());
-//
-//                optimizer.addEdge(edge);
-//            }
 
         }
 
@@ -307,4 +270,9 @@ namespace myslam
     void VisualOdometry::addKeyFrame() {
         map_->insertKeyFrame(curr_);
     }
+
+    void VisualOdometry::featureDetection(Frame frame) {
+
+    }
+
 }

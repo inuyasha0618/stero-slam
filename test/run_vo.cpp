@@ -45,8 +45,8 @@ int main ( int argc, char** argv )
 
         cout << filename_l << endl;
 
-        cv::Mat img_left = cv::imread(filename_l);
-        cv::Mat img_right = cv::imread (filename_r);
+        cv::Mat img_left = cv::imread(filename_l, 0); // 转换为灰度图
+        cv::Mat img_right = cv::imread (filename_r, 0);
         if ( img_left.data==nullptr || img_right.data==nullptr ) {
             cout << "no img data" << endl;
             break;
