@@ -24,10 +24,15 @@ include_directories(/home/slam/Sophus)
 find_package(G2O REQUIRED)
 include_directories(${G2O_INCLUDE_DIRS})
 
+find_package( Cholmod )
+include_directories( ${CHOLMOD_INCLUDE_DIR} )
+
 set(THIRD_PARTY_LIBS
         ${OpenCV_LIBS}
         ${SOPHUS_LIBS}
-        g2o_core g2o_stuff g2o_types_sba
+        ${CHOLMOD_LIBRARIES}
+#        g2o_core g2o_stuff g2o_types_sba
+        g2o_core g2o_types_slam3d g2o_solver_csparse g2o_stuff g2o_csparse_extension g2o_types_sim3 g2o_types_sba
         )
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include)

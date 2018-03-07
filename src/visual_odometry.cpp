@@ -133,6 +133,8 @@ namespace myslam
     }
 
     void VisualOdometry::poseEstimationPnP() {
+        // 谜之delta
+        const float delta = sqrt(5.991);
         vector<cv::Point3f> pts3d;
         vector<cv::Point2f> pts2d, pts2d_r; //　左右视图的像素坐标
 
@@ -158,27 +160,38 @@ namespace myslam
         );
 
 
-        //　定义块求解器类型
-        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,3>> Block;
-        // 选择块求解器所使用的求解方式，稠密还是稀疏
-        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
-        // 实例化一个块求解器指针
-        Block* blockSolverPtr = new Block(linearSolver);
+//        //　定义块求解器类型
+//        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,3>> Block;
+//        // 选择块求解器所使用的求解方式，稠密还是稀疏
+//        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
+//        // 实例化一个块求解器指针
+//        Block* blockSolverPtr = new Block(linearSolver);
+//
+//        //　设置所用优化算法
+//        g2o::OptimizationAlgorithmLevenberg* optiAlgorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolverPtr);
+//
+//        //　创建优化问题
+//        g2o::SparseOptimizer optimizer;
+//
+//        //　给优化问题设置上刚刚选好的优化算法
+//        optimizer.setAlgorithm(optiAlgorithm);
 
-        //　设置所用优化算法
-        g2o::OptimizationAlgorithmLevenberg* optiAlgorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolverPtr);
-
-        //　创建优化问题
+        // g2o初始化
         g2o::SparseOptimizer optimizer;
 
-        //　给优化问题设置上刚刚选好的优化算法
-        optimizer.setAlgorithm(optiAlgorithm);
+        g2o::BlockSolver_6_3::LinearSolverType* linearSolver = new g2o::LinearSolverCholmod<g2o::BlockSolver_6_3::PoseMatrixType> ();
+        g2o::BlockSolver_6_3*   solver_ptr = new g2o::BlockSolver_6_3(linearSolver);
+        g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg( solver_ptr );
+        optimizer.setAlgorithm( solver );
+
+
 
         // 下面就是给优化问题添加顶点和边
 
         // 创建顶点,　该问题就一个顶点，即相机的相对参考帧的位姿
         g2o::VertexSE3Expmap* pose = new g2o::VertexSE3Expmap();
         pose->setId(0);
+        pose->setFixed(false);
         // 设置优化初始值
         pose->setEstimate(g2o::SE3Quat(T_c_r_esti_.rotation_matrix(), T_c_r_esti_.translation()));
 
@@ -188,25 +201,63 @@ namespace myslam
         // 添加边
         for (int i = 0; i < inliers.rows; i++) {
             // 创建边
-            EdgeProjXYZ2SteroUVPoseOnly* edge = new EdgeProjXYZ2SteroUVPoseOnly();
-            edge->setId(i);
-            edge->setVertex(0, pose);
-
             int index = inliers.at<int>(i, 0);
 
+            EdgeProjXYZ2SteroUVPoseOnly* edge = new EdgeProjXYZ2SteroUVPoseOnly();
+            edge->setId(i);
+            edge->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(0)));
+
+//            edge->setVertex(0, pose);
+
             edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
-            edge->camera_ = curr_->camera_.get();
+//            edge->camera_ = curr_->camera_.get();
+            edge->fx = curr_->camera_->fx_;
+            edge->fy = curr_->camera_->fy_;
+            edge->cx = curr_->camera_->cx_;
+            edge->cy = curr_->camera_->cy_;
+            edge->bw = curr_->camera_->base_line_;
             edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
             edge->setInformation(Eigen::Matrix3d::Identity());
 
+            // 由于误匹配的存在，要设置robust kernel
+//            g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber();
+//            edge->setRobustKernel( rk );
+//            rk->setDelta( delta );
+
             optimizer.addEdge(edge);
+
+//            if (pts2d[index].x - pts2d_r[index].x <= curr_->camera_->fx_ / 30000) {
+//                EdgeProjXYZ2SteroUVRotOnly* edge = new EdgeProjXYZ2SteroUVRotOnly();
+//                edge->setId(i);
+//                edge->setVertex(0, pose);
+//
+//                edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
+//                edge->camera_ = curr_->camera_.get();
+//                edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
+//                edge->setInformation(Eigen::Matrix3d::Identity());
+//
+//                optimizer.addEdge(edge);
+//            } else {
+//                EdgeProjXYZ2SteroUVPoseOnly* edge = new EdgeProjXYZ2SteroUVPoseOnly();
+//                edge->setId(i);
+//                edge->setVertex(0, pose);
+//
+//                edge->setMeasurement(Eigen::Vector3d(pts2d[index].x, pts2d[index].y, pts2d_r[index].x));
+//                edge->camera_ = curr_->camera_.get();
+//                edge->point_ = Eigen::Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
+//                edge->setInformation(Eigen::Matrix3d::Identity());
+//
+//                optimizer.addEdge(edge);
+//            }
+
         }
 
 
         //　开始优化
-        optimizer.setVerbose(false);
-        optimizer.initializeOptimization();
-        optimizer.optimize(3);
+        optimizer.setVerbose(true);
+        cout << "edges: " << optimizer.edges().size() << endl;
+        optimizer.initializeOptimization(0);
+        optimizer.optimize(10);
 
         T_c_r_esti_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
 

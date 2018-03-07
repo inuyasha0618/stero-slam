@@ -33,23 +33,7 @@ namespace myslam
         _jacobianOplusXi ( 1,5 ) = y/z_2 *fy;
     }
 
-    void EdgeProjXYZ2SteroUVPoseOnly::computeError() {
-        const g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[0]);
-        Eigen::Vector3d P_c_l = pose->estimate().map(point_);
-        Sophus::SE3 T_r_l = Sophus::SE3(Eigen::Matrix3d::Identity(), Eigen::Vector3d(-camera_->base_line_, 0, 0));
-        Eigen::Vector3d P_c_r = T_r_l * P_c_l;
-
-        Eigen::Vector2d p_p_l = camera_->camera2pixel(P_c_l);
-        Eigen::Vector2d p_p_r = camera_->camera2pixel(P_c_r);
-
-        // 这里的误差和重投影都是三维的
-        Eigen::Vector3d obs(_measurement);
-        _error = obs - Eigen::Vector3d(p_p_l(0), p_p_l(1), p_p_r(0));
-    }
-
     void EdgeProjXYZ2SteroUVPoseOnly::linearizeOplus() {
-        double fx = camera_->fx_;
-        double fy = camera_->fy_;
 
         g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[0]);
         Eigen::Vector3d xyz_trans = pose->estimate().map(point_);
@@ -58,6 +42,7 @@ namespace myslam
         double z = xyz_trans[2];
         double z_2 = z*z;
         double inv_z_2 = 1.0/z_2;
+        double bf = fx * bw;
 
         _jacobianOplusXi ( 0,0 ) =  x*y * inv_z_2 *fx;
         _jacobianOplusXi ( 0,1 ) = - ( 1+ ( x*x * inv_z_2 ) ) *fx;
@@ -73,22 +58,29 @@ namespace myslam
         _jacobianOplusXi ( 1,4 ) = -1./z *fy;
         _jacobianOplusXi ( 1,5 ) = y * inv_z_2 *fy;
 
-        _jacobianOplusXi ( 2,0 ) =  (x - camera_->base_line_)*y * inv_z_2 *fx;
-        _jacobianOplusXi ( 2,1 ) = - ( 1+ ( (x - camera_->base_line_) * x * inv_z_2 ) ) *fx;
-        _jacobianOplusXi ( 2,2 ) = y/z * fx;
-        _jacobianOplusXi ( 2,3 ) = -1./z * fx;
-        _jacobianOplusXi ( 2,4 ) = 0;
-        _jacobianOplusXi ( 2,5 ) = (x - camera_->base_line_) * inv_z_2 * fx;
+//        _jacobianOplusXi ( 2,0 ) =  (x - bw)*y * inv_z_2 *fx;
+//        _jacobianOplusXi ( 2,1 ) = - ( 1+ ( (x - bw) * x * inv_z_2 ) ) *fx;
+//        _jacobianOplusXi ( 2,2 ) = y/z * fx;
+//        _jacobianOplusXi ( 2,3 ) = -1./z * fx;
+//        _jacobianOplusXi ( 2,4 ) = 0;
+//        _jacobianOplusXi ( 2,5 ) = (x - bw) * inv_z_2 * fx;
+
+        _jacobianOplusXi(2, 0) = _jacobianOplusXi(0, 0) - bf * y * inv_z_2;
+        _jacobianOplusXi(2, 1) = _jacobianOplusXi(0, 1) + bf * x * inv_z_2;
+        _jacobianOplusXi(2, 2) = _jacobianOplusXi(0, 2);
+        _jacobianOplusXi(2, 3) = _jacobianOplusXi(0, 3);
+        _jacobianOplusXi(2, 4) = 0;
+        _jacobianOplusXi(2, 5) = _jacobianOplusXi(0, 5) - bf * inv_z_2;
     }
 
     void EdgeProjXYZ2SteroUVRotOnly::computeError() {
         const g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[0]);
         Eigen::Vector3d P_c_l = pose->estimate().map(point_);
-        Sophus::SE3 T_r_l = Sophus::SE3(Eigen::Matrix3d::Identity(), Eigen::Vector3d(-camera_->base_line_, 0, 0));
+        Sophus::SE3 T_r_l = Sophus::SE3(Eigen::Matrix3d::Identity(), Eigen::Vector3d(-bw, 0, 0));
         Eigen::Vector3d P_c_r = T_r_l * P_c_l;
 
-        Eigen::Vector2d p_p_l = camera_->camera2pixel(P_c_l);
-        Eigen::Vector2d p_p_r = camera_->camera2pixel(P_c_r);
+        Eigen::Vector2d p_p_l = camera2pixel(P_c_l);
+        Eigen::Vector2d p_p_r = camera2pixel(P_c_r);
 
         // 这里的误差和重投影都是三维的
         Eigen::Vector3d obs(_measurement);
@@ -96,8 +88,6 @@ namespace myslam
     }
 
     void EdgeProjXYZ2SteroUVRotOnly::linearizeOplus() {
-        double fx = camera_->fx_;
-        double fy = camera_->fy_;
 
         g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[0]);
         Eigen::Vector3d xyz_trans = pose->estimate().map(point_);
@@ -121,8 +111,8 @@ namespace myslam
         _jacobianOplusXi ( 1,4 ) = 0;
         _jacobianOplusXi ( 1,5 ) = 0;
 
-        _jacobianOplusXi ( 2,0 ) =  (x - camera_->base_line_)*y * inv_z_2 *fx;
-        _jacobianOplusXi ( 2,1 ) = - ( 1+ ( (x - camera_->base_line_) * x * inv_z_2 ) ) *fx;
+        _jacobianOplusXi ( 2,0 ) =  (x - bw)*y * inv_z_2 *fx;
+        _jacobianOplusXi ( 2,1 ) = - ( 1+ ( (x - bw) * x * inv_z_2 ) ) *fx;
         _jacobianOplusXi ( 2,2 ) = y/z * fx;
         _jacobianOplusXi ( 2,3 ) = 0;
         _jacobianOplusXi ( 2,4 ) = 0;
