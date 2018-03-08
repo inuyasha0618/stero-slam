@@ -40,15 +40,12 @@ namespace myslam
                 featureDetection(curr_);
                 stereoMatching(curr_);
                 addStereoMapPoints(curr_);
-//                extractKeyPointsAndComputeDescriptors();
-//                setRef3DPoints();
                 break;
             }
             case OK:
             {
                 curr_ = frame;
-//                extractKeyPointsAndComputeDescriptors();
-                featrureMatching();
+                featrureTracking();
                 poseEstimationPnP();
                 cout << "num inliers: " << num_inliers_ << endl;
 
@@ -61,10 +58,9 @@ namespace myslam
 
 
                 if (checkEstimatedPose()) {
-//                    curr_->T_c_w_ = T_c_r_esti_ * ref_->T_c_w_;
                     //　本帧就算弄完了，把它变成参考帧，供下个帧使用
+                    // 合格了，本帧就作为参考帧
                     ref_ = curr_;
-//                    setRef3DPoints();
                     num_lost_ = 0;
 
 //                    if (checkKeyFrame()) {
@@ -87,41 +83,7 @@ namespace myslam
         return true;
     }
 
-    void VisualOdometry::extractKeyPointsAndComputeDescriptors() {
-
-        vector<cv::KeyPoint> leftKps;
-        vector<cv::KeyPoint> rightKps;
-        vector<cv::Point2f> left_points, right_points;
-
-        orb_->detect(curr_->img_left_, leftKps);
-
-        cv::Mat desLeft;
-
-        cv::KeyPoint::convert(leftKps, left_points);
-
-        vector<uchar> status;
-        vector<float> err;
-
-        cv::calcOpticalFlowPyrLK(curr_->img_left_, curr_->img_right_, left_points, right_points, status, err, cv::Size(11, 11));
-
-        vector<cv::Point2f> left_points_filtered, right_points_filtered;
-        for (int i = 0; i < status.size(); i++) {
-            cv::Point2f left_i = left_points[i] ,right_i = right_points[i];
-            if (right_i.x < 0 || right_i.y < 0) continue;
-            if (status[i] && abs(left_i.y - right_i.y) <= 3) {
-                left_points_filtered.push_back(left_i);
-                right_points_filtered.push_back(right_i);
-            }
-        }
-
-        cv::KeyPoint::convert(left_points_filtered, keypoints_curr_);
-        cv::KeyPoint::convert(right_points_filtered, keypoints_curr_right_);
-
-        // 可以把keypoints_curr过滤好之后在计算描述子，这样，计算量小了，描述子也不用过滤了
-        orb_->compute(curr_->img_left_, keypoints_curr_, descriptors_curr_);
-    }
-
-    void VisualOdometry::featrureMatching() {
+    void VisualOdometry::featrureTracking() {
 
         vector<cv::Point2f> ref_points, curr_points;
 
@@ -152,14 +114,6 @@ namespace myslam
         const float delta = sqrt(5.991);
         vector<cv::Point3f> pts3d;
         vector<cv::Point2f> pts2d, pts2d_r; //　左右视图的像素坐标
-
-//        vector<cv::KeyPoint> left_matched_kps, right_mathed_kps;
-//
-//        for (cv::DMatch match : features_matches_) {
-//            pts3d.push_back(pts_3d_ref_[match.queryIdx]);
-//            pts2d.push_back(keypoints_curr_[match.trainIdx].pt);
-//            pts2d_r.push_back(keypoints_curr_right_[match.trainIdx].pt);
-//        }
 
         for (auto feature: curr_->leftFeatures_) {
             if (feature->mapPoint_ != nullptr) {
@@ -246,22 +200,6 @@ namespace myslam
 //
 //        T_c_r_esti_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
 
-    }
-
-    void VisualOdometry::setRef3DPoints() {
-        pts_3d_ref_.clear();
-        descriptors_ref_ = cv::Mat();
-
-        for (size_t i = 0; i < keypoints_curr_.size(); i++) {
-            //　查询深度
-            double d = ref_->findDepth(keypoints_curr_[i], keypoints_curr_right_[i]);
-            if (d > 0) {
-                Eigen::Vector3d p_cam = ref_->camera_->pixel2camera(Eigen::Vector2d(keypoints_curr_[i].pt.x, keypoints_curr_[i].pt.y), d);
-                pts_3d_ref_.push_back(cv::Point3f(p_cam(0, 0), p_cam(1, 0), p_cam(2, 0)));
-                descriptors_ref_.push_back(descriptors_curr_.row(i));
-            }
-
-        }
     }
 
     bool VisualOdometry::checkEstimatedPose() {
