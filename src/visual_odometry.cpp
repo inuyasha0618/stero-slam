@@ -9,6 +9,8 @@
 #include "myslam/visual_odometry.h"
 #include "myslam/g2o_types.h"
 
+#define MIN_NUM_FEATURE 2000
+
 namespace myslam
 {
     VisualOdometry::VisualOdometry():
@@ -50,11 +52,19 @@ namespace myslam
                 poseEstimationPnP();
                 cout << "num inliers: " << num_inliers_ << endl;
 
+                if (curr_->leftFeatures_.size() < MIN_NUM_FEATURE) {
+                    curr_->leftFeatures_.clear();
+                    featureDetection(curr_);
+                    stereoMatching(curr_);
+                    addStereoMapPoints(curr_);
+                }
+
+
                 if (checkEstimatedPose()) {
-                    curr_->T_c_w_ = T_c_r_esti_ * ref_->T_c_w_;
+//                    curr_->T_c_w_ = T_c_r_esti_ * ref_->T_c_w_;
                     //　本帧就算弄完了，把它变成参考帧，供下个帧使用
                     ref_ = curr_;
-                    setRef3DPoints();
+//                    setRef3DPoints();
                     num_lost_ = 0;
 
 //                    if (checkKeyFrame()) {
@@ -112,26 +122,6 @@ namespace myslam
     }
 
     void VisualOdometry::featrureMatching() {
-//        vector<cv::DMatch> matches;
-//        cv::BFMatcher matcher(cv::NORM_HAMMING);
-//        matcher.match(descriptors_ref_, descriptors_curr_, matches);
-//        double min_dis = 999999999.0;
-//
-//        for (cv::DMatch& match : matches) {
-//            if (match.distance < min_dis) {
-//                min_dis = match.distance;
-//            }
-//        }
-//
-//        features_matches_.clear();
-//
-//        for (cv::DMatch& match: matches) {
-//            if (match.distance < max<float>(min_dis * match_ratio_, 30.0)) {
-//                features_matches_.push_back(match);
-//            }
-//        }
-//
-//        cout << "good matches: " << features_matches_.size() << endl;
 
         vector<cv::Point2f> ref_points, curr_points;
 
@@ -190,7 +180,7 @@ namespace myslam
         cv::Mat rvec, tvec, inliers;
         cv::solvePnPRansac(pts3d, pts2d, K, cv::Mat(), rvec, tvec, false, 100, 4.0, 0.99, inliers);
         num_inliers_ = inliers.rows;
-        T_c_r_esti_ = Sophus::SE3(
+        curr_->T_c_w_ = Sophus::SE3(
                 Sophus::SO3(rvec.at<double>(0, 0), rvec.at<double>(1, 0), rvec.at<double>(2, 0)),
                 Eigen::Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0), tvec.at<double>(2, 0))
         );
@@ -279,6 +269,8 @@ namespace myslam
             return false;
         }
 
+        T_c_r_esti_ = curr_->T_c_w_ * ref_->T_c_w_.inverse();
+
         Sophus::Vector6d tcr_vec = T_c_r_esti_.log();
         if (tcr_vec.norm() > 5.0) {
             return false;
@@ -318,6 +310,8 @@ namespace myslam
         vector<uchar> status;
         vector<float> err;
         for (auto feature: frame->leftFeatures_) {
+            if (feature->mapPoint_ != nullptr)
+                continue;
             leftPts.push_back(cv::Point2f(feature->pixel_[0], feature->pixel_[1]));
         }
         cv::calcOpticalFlowPyrLK(frame->img_left_, frame->img_right_, leftPts, rightPts, status, err);

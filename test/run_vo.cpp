@@ -96,6 +96,8 @@ int main ( int argc, char** argv )
         imshow( "Road facing camera", img_left );
         imshow( "Trajectory", traj );
 
+//        cv::waitKey(0);
+
         cv::waitKey(1);
     }
 
