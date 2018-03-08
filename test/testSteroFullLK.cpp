@@ -13,31 +13,18 @@
 int main ( int argc, char** argv )
 {
     clock_t start = clock();
-//    stringstream ss;
     myslam::Config::setParamFile(argv[1]);
     string dataset_dir = myslam::Config::getParam<string> ( "dataset_dir" );
-    int num_of_features = myslam::Config::getParam<int> ( "number_of_features" );
-    double scale_factor = myslam::Config::getParam<double> ( "scale_factor" );
-    int level_pyramid = myslam::Config::getParam<int> ( "level_pyramid" );
 
     string leftImgPath = dataset_dir + "image_0/000000.png";
     string rightImgPath = dataset_dir + "image_1/000000.png";
 
-    cv::Mat leftImg = cv::imread(leftImgPath);
-    cv::Mat rightImg = cv::imread(rightImgPath);
+    cv::Mat leftImg = cv::imread(leftImgPath, 0);
+    cv::Mat rightImg = cv::imread(rightImgPath, 0);
 
-    cv::Ptr<cv::ORB> orb = cv::ORB::create(num_of_features, scale_factor, level_pyramid);
     vector<cv::KeyPoint> leftKps;
-    vector<cv::KeyPoint> rightKps;
 
-    orb->detect(leftImg, leftKps);
-//    orb->detect(rightImg, rightKps);
-
-    cv::Mat desLeft;
-    cv::Mat matchImg;
-
-    orb->compute(leftImg, leftKps, desLeft);
-//    orb->compute(rightImg, rightKps, desRight);
+    cv::FAST(leftImg, leftKps, 20, true);
 
     vector<cv::Point2f> left_points;
     vector<cv::Point2f> right_points;
@@ -50,10 +37,10 @@ int main ( int argc, char** argv )
 
     clock_t end = clock();
     double elapsed_secs = double(end - start) / CLOCKS_PER_SEC;
-    cout << "Total time taken: " << elapsed_secs << "s" << endl;
+    cout << "Total time taken: " << elapsed_secs << "s" << endl << " total: " << left_points.size() << " points" << endl;
 
     for (int i = 0; i < right_points.size(); i++) {
-        if (status[i] && abs(left_points[i].y - right_points[i].y) <= 3) {
+        if (status[i] && fabs(left_points[i].y - right_points[i].y) <= 3) {
             cv::circle(leftImg, left_points[i], 2, cv::Scalar(0, 250, 0), 2);
             cv::circle(rightImg, right_points[i], 2, cv::Scalar(0, 250, 0), 2);
             cv::line(rightImg, left_points[i], right_points[i], cv::Scalar(0, 250, 0));
