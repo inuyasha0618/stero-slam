@@ -4,6 +4,9 @@ target_link_libraries( run_vo myslam )
 add_executable(testFast testFast.cpp)
 target_link_libraries(testFast ${OpenCV_LIBS})
 
+add_executable(testBlock testBlock.cpp)
+target_link_libraries(testBlock ${OpenCV_LIBS})
+
 add_executable(testSteroMatching testSteroMatching.cpp)
 target_link_libraries(testSteroMatching myslam)
 

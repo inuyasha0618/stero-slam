@@ -38,6 +38,7 @@ namespace myslam
                 curr_ = ref_ = frame;
                 map_->insertKeyFrame(frame);
                 featureDetection(curr_);
+
                 stereoMatching(curr_);
                 addStereoMapPoints(curr_);
                 break;
@@ -106,6 +107,8 @@ namespace myslam
                 curr_->leftFeatures_.push_back(feature);
             }
         }
+
+
 
     }
 
@@ -234,13 +237,49 @@ namespace myslam
     }
 
     void VisualOdometry::featureDetection(shared_ptr<Frame> frame) {
-        vector<cv::KeyPoint> kps;
-        cv::FAST(frame->img_left_, kps, 20, true);
-        for (int i = 0; i < kps.size(); i++) {
-            shared_ptr<Feature> feature(new Feature);
-            feature->pixel_ = Eigen::Vector2d(kps[i].pt.x, kps[i].pt.y);
-            frame->leftFeatures_.push_back(feature);
+//        vector<cv::KeyPoint> kps;
+//        cv::FAST(frame->img_left_, kps, 20, true);
+
+        // Todo 应该将图片网格化，　然后每个格子里只提一个特征点
+        // 从１开始提，可以有效避免提在边缘处
+        for (int i = 1; i < FRAME_GRID_ROWS_ - 1; i++) {
+            for (int j = 1; j < FRAME_GRID_COLS_ - 1; j++) {
+                // 当前图像块
+                cv::Mat block = curr_->img_left_(cv::Rect(j * FRAME_CRID_SIZE_, i * FRAME_CRID_SIZE_, FRAME_CRID_SIZE_, FRAME_CRID_SIZE_));
+                vector<cv::KeyPoint> block_kps;
+                cv::FAST(block, block_kps, 20, true);
+
+                // Todo 找到本图像块中最好的特征点
+                int x_start = j * FRAME_CRID_SIZE_;
+                int y_start = i * FRAME_CRID_SIZE_;
+
+                float scoreBest = -1;
+                int idxBest = 0;
+                for (size_t k = 0; k < block_kps.size(); k++) {
+                    cv::KeyPoint &kp = block_kps[k];
+                    kp.pt.x += x_start;
+                    kp.pt.y += y_start;
+                    float score = ShiTomasiScore(frame->img_left_, kp.pt.x, kp.pt.y);
+                    if (score > scoreBest) {
+                        scoreBest = score;
+                        idxBest = k;
+                    }
+
+                }
+
+                if (scoreBest < 0) continue;
+
+                shared_ptr<Feature> feature(new Feature);
+                feature->pixel_ = Eigen::Vector2d(block_kps[idxBest].pt.x, block_kps[idxBest].pt.y);
+                frame->leftFeatures_.push_back(feature);
+            }
         }
+
+//        for (int i = 0; i < kps.size(); i++) {
+//            shared_ptr<Feature> feature(new Feature);
+//            feature->pixel_ = Eigen::Vector2d(kps[i].pt.x, kps[i].pt.y);
+//            frame->leftFeatures_.push_back(feature);
+//        }
     }
 
     void VisualOdometry::stereoMatching(shared_ptr<Frame> frame) {

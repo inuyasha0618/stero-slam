@@ -23,6 +23,13 @@ int main ( int argc, char** argv )
     myslam::VisualOdometry::Ptr vo ( new myslam::VisualOdometry );
 
     string dataset_dir = myslam::Config::getParam<string> ( "dataset_dir" );
+    int imageWidth = myslam::Config::getParam<int> ( "image.width" );
+    int imageHeight = myslam::Config::getParam<int> ( "image.height" );
+    int gridSize = myslam::Config::getParam<int> ( "image.gridSize" );
+
+    vo->FRAME_CRID_SIZE_ = gridSize;
+    vo->FRAME_GRID_ROWS_ = ceil(imageHeight / gridSize);
+    vo->FRAME_GRID_COLS_ = ceil(imageWidth / gridSize);
 
     myslam::Camera::Ptr camera ( new myslam::Camera );
 
