@@ -5,6 +5,7 @@
 #include "myslam/common_include.h"
 #include "myslam/map.h"
 #include "myslam/feature.h"
+#include "myslam/settings.h"
 
 #include <opencv2/features2d/features2d.hpp>
 
@@ -34,6 +35,7 @@ namespace myslam
         vector<cv::DMatch> features_matches_;
 
         Sophus::SE3 T_c_r_esti_;
+        Sophus::SE3 speed_;
         int num_inliers_;
         int num_lost_;
 
@@ -47,9 +49,9 @@ namespace myslam
         double key_frame_min_rot_;
         double key_frame_min_trans_;
 
-        int FRAME_GRID_ROWS_;
-        int FRAME_GRID_COLS_;
-        int FRAME_CRID_SIZE_;
+//        int FRAME_GRID_ROWS_;
+//        int FRAME_GRID_COLS_;
+//        int FRAME_CRID_SIZE_;
 
     public:
         VisualOdometry();
@@ -68,6 +70,7 @@ namespace myslam
         void addKeyFrame();
         bool checkEstimatedPose();
         bool checkKeyFrame();
+        int cleanBadFeatures();
 
     private:
         // Shi-Tomasi 分数，这个分数越高则特征越优先

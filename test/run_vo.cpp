@@ -8,6 +8,7 @@
 
 #include "myslam/config.h"
 #include "myslam/visual_odometry.h"
+#include "myslam/settings.h"
 
 #define MAX_FRAME 2000
 
@@ -27,9 +28,12 @@ int main ( int argc, char** argv )
     int imageHeight = myslam::Config::getParam<int> ( "image.height" );
     int gridSize = myslam::Config::getParam<int> ( "image.gridSize" );
 
-    vo->FRAME_CRID_SIZE_ = gridSize;
-    vo->FRAME_GRID_ROWS_ = ceil(imageHeight / gridSize);
-    vo->FRAME_GRID_COLS_ = ceil(imageWidth / gridSize);
+    myslam::IMAGE_WIDTH = imageWidth;
+    myslam::IMAGE_HEIGHT = imageHeight;
+
+    myslam::FRAM_GRID_SIZE = gridSize;
+    myslam::FRAM_GRID_ROWS = ceil(imageHeight / gridSize);
+    myslam::FRAM_GRID_COLS = ceil(imageWidth / gridSize);
 
     myslam::Camera::Ptr camera ( new myslam::Camera );
 

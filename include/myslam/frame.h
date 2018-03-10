@@ -3,6 +3,8 @@
 
 #include "myslam/common_include.h"
 #include "myslam/camera.h"
+#include "myslam/feature.h"
+#include "myslam/settings.h"
 
 namespace myslam
 {
@@ -18,6 +20,7 @@ namespace myslam
         Camera::Ptr camera_;
         cv::Mat img_left_, img_right_;
         vector<shared_ptr<Feature>> leftFeatures_;                // 左视图的features
+        vector<vector<size_t>> frame_grid_;         // 把grid拉平，　每个格子里存放一个vector，里面是在这个格子里的feature的序号
 
     public:
         Frame();
@@ -33,6 +36,10 @@ namespace myslam
         Eigen::Vector3d getCameraCenter() const;
 
         bool isInFrame(const Eigen::Vector3d& p_w);
+
+        bool posInGrid(const shared_ptr<Feature> feature, int &posX, int &posY);
+
+        void assignFeaturesToGrid();
     };
 }
 
