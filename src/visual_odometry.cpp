@@ -38,6 +38,7 @@ namespace myslam
                 state_ = OK;
                 curr_ = ref_ = frame;
                 map_->insertKeyFrame(frame);
+                lastKeyFrame_ = frame;
                 featureDetection(curr_);
 
                 stereoMatching(curr_);
@@ -66,6 +67,12 @@ namespace myslam
 
                 bool checkRes = checkEstimatedPose();
                 cout << "checkRes: " << checkRes << endl;
+
+                if (checkKeyFrame()) {
+                    myBackend_->insertKeyFrame(curr_);
+                    cout << curr_->imgPath << "是关键帧" << endl;
+                    lastKeyFrame_ = curr_;
+                }
                 ref_ = curr_;
 //                if (checkRes) {
 //                    //　本帧就算弄完了，把它变成参考帧，供下个帧使用
@@ -310,7 +317,7 @@ namespace myslam
             valid_features++;
         }
 
-        cout << "有" << num_no_mappoint << "个没有mappoint的feature" << endl;
+//        cout << "有" << num_no_mappoint << "个没有mappoint的feature" << endl;
         return valid_features;
     }
 
@@ -330,9 +337,12 @@ namespace myslam
     }
 
     bool VisualOdometry::checkKeyFrame() {
-        Sophus::Vector6d tcr_vec = T_c_r_esti_.log();
-        Eigen::Vector3d trans = tcr_vec.head<3>();
-        Eigen::Vector3d rot = tcr_vec.tail<3>();
+        Sophus::SE3 Trc = lastKeyFrame_->T_c_w_ * curr_->T_c_w_.inverse();
+
+        Sophus::Vector6d trc_vec = Trc.log();
+//        Eigen::Vector3d trans = trc_vec.head<3>();
+        Eigen::Vector3d trans = Trc.translation();
+        Eigen::Vector3d rot = trc_vec.tail<3>();
 
         if (trans.norm() < key_frame_min_trans_ && rot.norm() < key_frame_min_rot_) {
             return false;

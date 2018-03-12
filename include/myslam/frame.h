@@ -16,6 +16,7 @@ namespace myslam
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
         typedef std::shared_ptr<Frame> Ptr;
         unsigned long id_; // 帧的id
+        string imgPath;
         double time_stamp_;
         Sophus::SE3 T_c_w_;
         Camera::Ptr camera_;

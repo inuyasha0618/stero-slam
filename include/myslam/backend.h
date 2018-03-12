@@ -2,6 +2,7 @@
 #define BACKEND_H
 
 #include "myslam/common_include.h"
+#include "myslam/frame.h"
 
 namespace myslam {
     class Frame;

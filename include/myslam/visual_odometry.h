@@ -6,11 +6,13 @@
 #include "myslam/map.h"
 #include "myslam/feature.h"
 #include "myslam/settings.h"
+#include "myslam/backend.h"
 
 #include <opencv2/features2d/features2d.hpp>
 
 namespace myslam
 {
+    class Backend;
     // Todo 由于vo被tracking和backend两个线程所共享，所以应该设置一些锁
     class VisualOdometry
     {
@@ -23,10 +25,13 @@ namespace myslam
             LOST
         };
 
+        shared_ptr<Backend> myBackend_;
+
         VOstate state_;
         Map::Ptr map_;
         Frame::Ptr ref_;
         Frame::Ptr curr_;
+        Frame::Ptr lastKeyFrame_;
 
         cv::Ptr<cv::ORB> orb_; // orb detector and computer
         vector<cv::Point3f> pts_3d_ref_;

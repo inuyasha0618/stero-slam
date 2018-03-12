@@ -8,6 +8,7 @@
 
 #include "myslam/config.h"
 #include "myslam/visual_odometry.h"
+#include "myslam/backend.h"
 #include "myslam/settings.h"
 
 #define MAX_FRAME 2000
@@ -22,6 +23,8 @@ int main ( int argc, char** argv )
 
     myslam::Config::setParamFile(argv[1]);
     myslam::VisualOdometry::Ptr vo ( new myslam::VisualOdometry );
+    shared_ptr<myslam::Backend> backend(new myslam::Backend(vo));
+    vo->myBackend_ = backend;
 
     string dataset_dir = myslam::Config::getParam<string> ( "dataset_dir" );
     int imageWidth = myslam::Config::getParam<int> ( "image.width" );
@@ -51,6 +54,8 @@ int main ( int argc, char** argv )
 
     for ( int i=0; i<MAX_FRAME; i++ )
     {
+        cout << "*************************开始处理第 " << i << " 帧**************************************" << endl;
+
         sprintf(filename_l, "/home/slam/datasets/kitti/00/image_0/%06d.png", i);
         sprintf(filename_r, "/home/slam/datasets/kitti/00/image_1/%06d.png", i);
 
@@ -66,6 +71,8 @@ int main ( int argc, char** argv )
         pFrame->camera_ = camera;
         pFrame->img_left_ = img_left;
         pFrame->img_right_ = img_right;
+        pFrame->imgPath = to_string(i);
+
 
         boost::timer timer;
         vo->addFrame ( pFrame );
@@ -80,7 +87,6 @@ int main ( int argc, char** argv )
         int x = int(Twc.translation()(0)) + 300;
         int y = int(Twc.translation()(2)) + 100;
 
-        cout << "x: " << x << "y: " << y << endl;
         cv::circle(traj, cv::Point(x, y) ,1, CV_RGB(255,0,0), 2);
 
         if (ground_truth_pose.is_open()) {

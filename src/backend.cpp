@@ -4,7 +4,7 @@ namespace myslam {
     void Backend::MainLoop() {
         while(1) {
             unique_lock<mutex> lock(mutexNewKfs);
-            cond_.wait(lock, [](){return !newKfs_.empty();});
+            cond_.wait(lock, [&](){return !this->newKfs_.empty();});
             currFrame_ = newKfs_.front();
             newKfs_.pop_front();
             kfWindow_.push_back(currFrame_);
@@ -21,10 +21,10 @@ namespace myslam {
     }
 
     void Backend::processNewKeyFrame() {
-        cout << "收到一个新的关键帧，　对应图片为" << endl;
+        cout << "Backend线程收到一个新的关键帧，　对应图片为 " << currFrame_->imgPath << endl;
     }
 
     void Backend::doLocalBA() {
-        
+
     }
 }
