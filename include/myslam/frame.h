@@ -9,6 +9,7 @@
 namespace myslam
 {
     class Feature;
+    // Todo 由于Frame被前后端所共享，所以应该加些锁
     class Frame
     {
     public:

@@ -11,6 +11,7 @@
 
 namespace myslam
 {
+    // Todo 由于vo被tracking和backend两个线程所共享，所以应该设置一些锁
     class VisualOdometry
     {
     public:

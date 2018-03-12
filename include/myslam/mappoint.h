@@ -7,6 +7,7 @@ namespace myslam
 {
     class Frame;
 
+    // Todo 由于mappoint被前后端所共享，所以应该加些锁
     class MapPoint
     {
     public:

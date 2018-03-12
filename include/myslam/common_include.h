@@ -28,5 +28,10 @@
 #include <set>
 #include <unordered_map>
 #include <map>
+#include <deque>
+
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 using namespace std;
 #endif

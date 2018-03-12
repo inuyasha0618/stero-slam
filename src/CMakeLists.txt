@@ -7,6 +7,7 @@ add_library(myslam SHARED
         visual_odometry.cpp
         g2o_types.cpp
         settings.cpp
+        backend.cpp
         )
 
 target_link_libraries(myslam ${THIRD_PARTY_LIBS})
