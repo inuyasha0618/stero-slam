@@ -42,19 +42,6 @@ namespace myslam
 
                 stereoMatching(curr_);
 
-//                vector<cv::KeyPoint> kps;
-//                for (auto feature: curr_->leftFeatures_) {
-//                    cv::KeyPoint kp;
-//                    kp.pt.x = feature->pixel_[0];
-//                    kp.pt.y = feature->pixel_[1];
-//                    kps.push_back(kp);
-//                }
-//
-//                cv::Mat output;
-//                cv::drawKeypoints(curr_->img_left_, kps, output);
-//                cv::imshow("kps: ", output);
-//                cv::waitKey(0);
-
                 addStereoMapPoints(curr_);
                 break;
             }
@@ -67,47 +54,11 @@ namespace myslam
                 speed_ = curr_->T_c_w_ * ref_->T_c_w_.inverse();
                 cout << "valid features: " << validFeatures << endl;
 
-//                curr_->leftFeatures_.clear();
-//                    featureDetection(curr_);
-//                    stereoMatching(curr_);
-//                    addStereoMapPoints(curr_);
-
                 if (validFeatures < MIN_NUM_FEATURE) {
 //                    cv::waitKey(0);
 //                    curr_->leftFeatures_.clear();
 
-//                    vector<cv::KeyPoint> kps;
-//                    for (auto feature: curr_->leftFeatures_) {
-//                        if (feature == nullptr)
-//                            continue;
-//                        cv::KeyPoint kp;
-//                        kp.pt.x = feature->pixel_[0];
-//                        kp.pt.y = feature->pixel_[1];
-//                        kps.push_back(kp);
-//                    }
-//
-//                    cv::Mat output;
-//                    cv::drawKeypoints(curr_->img_left_, kps, output);
-//                    cv::imshow("before detection kps: ", output);
-//                    cv::waitKey(0);
-
-
                     featureDetection(curr_);
-
-//                    vector<cv::KeyPoint> kps2;
-//                    for (auto feature: curr_->leftFeatures_) {
-//                        if (feature == nullptr)
-//                            continue;
-//                        cv::KeyPoint kp;
-//                        kp.pt.x = feature->pixel_[0];
-//                        kp.pt.y = feature->pixel_[1];
-//                        kps2.push_back(kp);
-//                    }
-//
-//                    cv::Mat output2;
-//                    cv::drawKeypoints(curr_->img_left_, kps2, output2);
-//                    cv::imshow("after detection kps: ", output2);
-//                    cv::waitKey(0);
 
                     stereoMatching(curr_);
                     addStereoMapPoints(curr_);
@@ -146,12 +97,6 @@ namespace myslam
 
         vector<cv::Point2f> ref_points, curr_points;
         vector<size_t> validRefFeatIdx;
-
-//        for (auto feature: ref_->leftFeatures_) {
-//            if (feature == nullptr)
-//                continue;
-//            ref_points.push_back(cv::Point2f(feature->pixel_[0], feature->pixel_[1]));
-//        }
 
         for (int i = 0; i < ref_->leftFeatures_.size(); i++) {
             auto& feature = ref_->leftFeatures_[i];
@@ -410,10 +355,8 @@ namespace myslam
             for (int j = 1; j < FRAM_GRID_COLS - 1; j++) {
                 //　这样保证了只有没有提点的格子才提点，有点的格子就不管了, 加快提点的效率
                 if (!curr_->frame_grid_[FRAM_GRID_COLS * i + j].empty()) {
-//                    cout << "不为空" << endl;
                     continue;
                 }
-//                cout << "为空！" << endl;
                 // 当前图像块
                 cv::Mat block = curr_->img_left_(cv::Rect(j * FRAM_GRID_SIZE, i * FRAM_GRID_SIZE, FRAM_GRID_SIZE, FRAM_GRID_SIZE));
                 vector<cv::KeyPoint> block_kps;
