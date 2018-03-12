@@ -10,7 +10,7 @@
 #include "myslam/g2o_types.h"
 #include "myslam/settings.h"
 
-#define MIN_NUM_FEATURE 100
+#define MIN_NUM_FEATURE 80
 
 namespace myslam
 {
@@ -74,8 +74,41 @@ namespace myslam
 
                 if (validFeatures < MIN_NUM_FEATURE) {
 //                    cv::waitKey(0);
-                    curr_->leftFeatures_.clear();
+//                    curr_->leftFeatures_.clear();
+
+//                    vector<cv::KeyPoint> kps;
+//                    for (auto feature: curr_->leftFeatures_) {
+//                        if (feature == nullptr)
+//                            continue;
+//                        cv::KeyPoint kp;
+//                        kp.pt.x = feature->pixel_[0];
+//                        kp.pt.y = feature->pixel_[1];
+//                        kps.push_back(kp);
+//                    }
+//
+//                    cv::Mat output;
+//                    cv::drawKeypoints(curr_->img_left_, kps, output);
+//                    cv::imshow("before detection kps: ", output);
+//                    cv::waitKey(0);
+
+
                     featureDetection(curr_);
+
+//                    vector<cv::KeyPoint> kps2;
+//                    for (auto feature: curr_->leftFeatures_) {
+//                        if (feature == nullptr)
+//                            continue;
+//                        cv::KeyPoint kp;
+//                        kp.pt.x = feature->pixel_[0];
+//                        kp.pt.y = feature->pixel_[1];
+//                        kps2.push_back(kp);
+//                    }
+//
+//                    cv::Mat output2;
+//                    cv::drawKeypoints(curr_->img_left_, kps2, output2);
+//                    cv::imshow("after detection kps: ", output2);
+//                    cv::waitKey(0);
+
                     stereoMatching(curr_);
                     addStereoMapPoints(curr_);
                 }
@@ -112,11 +145,20 @@ namespace myslam
     void VisualOdometry::featrureTracking() {
 
         vector<cv::Point2f> ref_points, curr_points;
+        vector<size_t> validRefFeatIdx;
 
-        for (auto feature: ref_->leftFeatures_) {
+//        for (auto feature: ref_->leftFeatures_) {
+//            if (feature == nullptr)
+//                continue;
+//            ref_points.push_back(cv::Point2f(feature->pixel_[0], feature->pixel_[1]));
+//        }
+
+        for (int i = 0; i < ref_->leftFeatures_.size(); i++) {
+            auto& feature = ref_->leftFeatures_[i];
             if (feature == nullptr)
                 continue;
             ref_points.push_back(cv::Point2f(feature->pixel_[0], feature->pixel_[1]));
+            validRefFeatIdx.push_back(i);
         }
 
         vector<uchar> status;
@@ -126,10 +168,12 @@ namespace myslam
 
         cv::findFundamentalMat(ref_points, curr_points, cv::FM_RANSAC, 3.0, 0.99, status);
 
-        vector<cv::DMatch> matches;
-        vector<cv::KeyPoint> kps_ref, kps_curr;
+        cout << "ref_points size: " << ref_points.size() << "curr_points size: " << curr_points.size() << endl;
 
-        size_t curr_idx = 0;
+//        vector<cv::DMatch> matches;
+//        vector<cv::KeyPoint> kps_ref, kps_curr;
+
+        size_t curr_idx = 0, mps = 0;
         for (size_t i = 0; i < curr_points.size(); i++) {
 
 //            cv::KeyPoint kp_curr;
@@ -147,12 +191,12 @@ namespace myslam
                               curr_points[i].y < myslam::IMAGE_HEIGHT - myslam::BORDER)) {
                 shared_ptr<Feature> feature(new Feature);
                 feature->pixel_ = Eigen::Vector2d(curr_points[i].x, curr_points[i].y);
-                if (ref_->leftFeatures_[i]->mapPoint_ != nullptr) {
-                    feature->mapPoint_ = ref_->leftFeatures_[i]->mapPoint_;
-                }
+//                if (ref_->leftFeatures_[i]->mapPoint_ != nullptr) {
+//                    feature->mapPoint_ = ref_->leftFeatures_[i]->mapPoint_;
+//                }
 
-                feature->mapPoint_ = ref_->leftFeatures_[i]->mapPoint_;
-
+                feature->mapPoint_ = ref_->leftFeatures_[validRefFeatIdx[i]]->mapPoint_;
+                mps++;
                 curr_->leftFeatures_.push_back(feature);
 
 //                cv::DMatch match;
@@ -167,37 +211,41 @@ namespace myslam
 //        cv::imshow("feature tracking: ", outputImg);
 //        cv::waitKey(0);
 
+        cout << "传递了" << mps << "个mappoints" << endl;
     }
 
     void VisualOdometry::poseEstimationPnP() {
+
+        vector<cv::Point3f> pts3d;
+        vector<cv::Point2f> pts2d;
+
+        for (cv::DMatch match : features_matches_) {
+            pts3d.push_back(pts_3d_ref_[match.queryIdx]);
+            pts2d.push_back(keypoints_curr_[match.trainIdx].pt);
+        }
+
+        for (auto feature: curr_->leftFeatures_) {
+            if (feature == nullptr || feature->mapPoint_ == nullptr)
+                continue;
+
+            shared_ptr<MapPoint>& mp = feature->mapPoint_;
+            pts3d.push_back(cv::Point3f(mp->pos_[0], mp->pos_[1], mp->pos_[2]));
+            pts2d.push_back(cv::Point2f(feature->pixel_[0], feature->pixel_[1]));
+        }
+
+        cv::Mat K = (cv::Mat_<double>(3, 3)
+                << ref_->camera_->fx_, 0, ref_->camera_->cx_,
+                0, ref_->camera_->fy_, ref_->camera_->cy_,
+                0, 0, 1.0);
+        cv::Mat rvec, tvec, inliers;
+        cv::solvePnPRansac(pts3d, pts2d, K, cv::Mat(), rvec, tvec, false, 100, 4.0, 0.99, inliers);
+        curr_->T_c_w_ = Sophus::SE3(
+                Sophus::SO3(rvec.at<double>(0, 0), rvec.at<double>(1, 0), rvec.at<double>(2, 0)),
+                Eigen::Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0), tvec.at<double>(2, 0))
+        );
+
         // 谜之delta
         const float delta = sqrt(5.991);
-//        vector<cv::Point3f> pts3d;
-//        vector<cv::Point2f> pts2d, pts2d_r; //　左右视图的像素坐标
-//
-//        for (auto feature: curr_->leftFeatures_) {
-//            if (feature->mapPoint_ != nullptr) {
-//                Eigen::Vector3d EigenPos3D = feature->mapPoint_->pos_;
-//                Eigen::Vector2d EigenPixel = feature->pixel_;
-//                cv::Point3f cvPos3D(EigenPos3D[0], EigenPos3D[1], EigenPos3D[2]);
-//                pts3d.push_back(cvPos3D);
-//                cv::Point2f cvPixel(EigenPixel[0], EigenPixel[1]);
-//                pts2d.push_back(cvPixel);
-//            }
-//        }
-//
-//
-//        cv::Mat K = (cv::Mat_<double>(3, 3)
-//                << ref_->camera_->fx_, 0, ref_->camera_->cx_,
-//                0, ref_->camera_->fy_, ref_->camera_->cy_,
-//                0, 0, 1.0);
-//        cv::Mat rvec, tvec, inliers;
-//        cv::solvePnPRansac(pts3d, pts2d, K, cv::Mat(), rvec, tvec, false, 100, 4.0, 0.99, inliers);
-//        num_inliers_ = inliers.rows;
-//        curr_->T_c_w_ = Sophus::SE3(
-//                Sophus::SO3(rvec.at<double>(0, 0), rvec.at<double>(1, 0), rvec.at<double>(2, 0)),
-//                Eigen::Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0), tvec.at<double>(2, 0))
-//        );
 
         // g2o初始化
         g2o::SparseOptimizer optimizer;
@@ -224,14 +272,15 @@ namespace myslam
         // 设置优化初始值
         Sophus::SE3 T_c_w_esti = speed_ * ref_->T_c_w_;
         cout << T_c_w_esti.matrix() << endl;
-        pose->setEstimate(g2o::SE3Quat(T_c_w_esti.rotation_matrix(), T_c_w_esti.translation()));
-
+//        pose->setEstimate(g2o::SE3Quat(T_c_w_esti.rotation_matrix(), T_c_w_esti.translation()));
+        pose->setEstimate(g2o::SE3Quat(curr_->T_c_w_.rotation_matrix(), curr_->T_c_w_.translation()));
         // 将该点加入优化问题中
         optimizer.addVertex(pose);
 
         vector<EdgeProjXYZ2UVPoseOnly*> edges;
         vector<size_t> validFeatureIdx;
 
+        int edgeId = 0;
         // 添加边
         for (int i = 0; i < curr_->leftFeatures_.size(); i++) {
             // 创建边
@@ -239,7 +288,7 @@ namespace myslam
             if (!feature->mapPoint_)
                 continue;
             EdgeProjXYZ2UVPoseOnly* edge = new EdgeProjXYZ2UVPoseOnly();
-            edge->setId(i);
+            edge->setId(edgeId++);
 
             edge->setVertex(0, pose);
             edge->point_ = feature->mapPoint_->pos_;
@@ -260,13 +309,14 @@ namespace myslam
 
 
         //　开始优化
-        optimizer.setVerbose(true);
+//        optimizer.setVerbose(true);
 
 //        optimizer.initializeOptimization(0);
 //        optimizer.optimize(10);
 
         for (size_t it = 0; it < 4; it++) {
-            pose->setEstimate(g2o::SE3Quat(T_c_w_esti.rotation_matrix(), T_c_w_esti.translation()));
+//            pose->setEstimate(g2o::SE3Quat(T_c_w_esti.rotation_matrix(), T_c_w_esti.translation()));
+            pose->setEstimate(g2o::SE3Quat(curr_->T_c_w_.rotation_matrix(), curr_->T_c_w_.translation()));
             optimizer.initializeOptimization(0);
             optimizer.optimize(10);
 
@@ -297,15 +347,25 @@ namespace myslam
 
     int VisualOdometry::cleanBadFeatures() {
         int valid_features = 0;
+        int num_no_mappoint = 0;
         for (size_t i = 0; i < curr_->leftFeatures_.size(); i++) {
             shared_ptr<Feature> feature = curr_->leftFeatures_[i];
+
+            if (feature == nullptr)
+                continue;
+
+            if (feature->mapPoint_ == nullptr)
+                num_no_mappoint++;
+
             if (feature->isOutlier_ || feature->mapPoint_ == nullptr) {
-                cout << "bad!!!" << endl;
+//                cout << "bad!!!" << endl;
                 feature = nullptr;
                 continue;
             }
             valid_features++;
         }
+
+        cout << "有" << num_no_mappoint << "个没有mappoint的feature" << endl;
         return valid_features;
     }
 
@@ -350,10 +410,10 @@ namespace myslam
             for (int j = 1; j < FRAM_GRID_COLS - 1; j++) {
                 //　这样保证了只有没有提点的格子才提点，有点的格子就不管了, 加快提点的效率
                 if (!curr_->frame_grid_[FRAM_GRID_COLS * i + j].empty()) {
-                    cout << "不为空" << endl;
+//                    cout << "不为空" << endl;
                     continue;
                 }
-                cout << "为空！" << endl;
+//                cout << "为空！" << endl;
                 // 当前图像块
                 cv::Mat block = curr_->img_left_(cv::Rect(j * FRAM_GRID_SIZE, i * FRAM_GRID_SIZE, FRAM_GRID_SIZE, FRAM_GRID_SIZE));
                 vector<cv::KeyPoint> block_kps;
@@ -396,12 +456,17 @@ namespace myslam
         vector<cv::Point2f> leftPts, rightPts;
         vector<uchar> status;
         vector<float> err;
-        for (auto feature: frame->leftFeatures_) {
-            //　已经左右目匹配过的点就不用管了
+        vector<size_t> validFeatIdx;
+
+        for (int i = 0; i < frame->leftFeatures_.size(); i++) {
+            auto& feature = frame->leftFeatures_[i];
+            //　已经左右目匹配过的点就不用管了, 空的feature当然也不用管
             if (feature == nullptr || feature->mapPoint_ != nullptr)
                 continue;
             leftPts.push_back(cv::Point2f(feature->pixel_[0], feature->pixel_[1]));
+            validFeatIdx.push_back(i);
         }
+
         cv::calcOpticalFlowPyrLK(frame->img_left_, frame->img_right_, leftPts, rightPts, status, err);
 
         for (size_t i = 0; i < rightPts.size(); i++) {
@@ -412,7 +477,7 @@ namespace myslam
                 if (pl.x < pr.x || (fabs(pl.y - pr.y) > 3))
                     continue;
                 float disparity = pl.x - pr.x;
-                frame->leftFeatures_[i]->invDepth_ = disparity / (frame->camera_->fx_ * frame->camera_->base_line_);
+                frame->leftFeatures_[validFeatIdx[i]]->invDepth_ = disparity / (frame->camera_->fx_ * frame->camera_->base_line_);
             }
         }
 
