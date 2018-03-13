@@ -421,6 +421,7 @@ namespace myslam
         }
 
         cv::calcOpticalFlowPyrLK(frame->img_left_, frame->img_right_, leftPts, rightPts, status, err);
+        cv::findFundamentalMat(leftPts, rightPts, cv::FM_RANSAC, 3.0, 0.99, status);
 
         for (size_t i = 0; i < rightPts.size(); i++) {
             if (status[i]) {
