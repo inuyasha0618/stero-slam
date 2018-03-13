@@ -26,6 +26,12 @@ namespace myslam
         static MapPoint::Ptr createMapPoint();
 
         weak_ptr<Frame> refKF_; // 第一次观测到此地图点的关键帧
+
+        // 维护了一个map, key是观测到该点的帧，以及在该帧当中是第几个feature
+        typedef std::map<weak_ptr<Frame>, size_t, std::owner_less<weak_ptr<Frame>>> ObsMap;
+        ObsMap observations_;
+
+        void addObservation(shared_ptr<Frame> keyFrame, size_t index);
     };
 }
 

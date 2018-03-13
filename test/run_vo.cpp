@@ -72,7 +72,7 @@ int main ( int argc, char** argv )
         pFrame->img_left_ = img_left;
         pFrame->img_right_ = img_right;
         pFrame->imgPath = to_string(i);
-
+        pFrame->id_ = i;
 
         boost::timer timer;
         vo->addFrame ( pFrame );

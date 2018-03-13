@@ -263,9 +263,6 @@ namespace myslam
         //　开始优化
 //        optimizer.setVerbose(true);
 
-//        optimizer.initializeOptimization(0);
-//        optimizer.optimize(10);
-
         for (size_t it = 0; it < 4; it++) {
 //            pose->setEstimate(g2o::SE3Quat(T_c_w_esti.rotation_matrix(), T_c_w_esti.translation()));
             pose->setEstimate(g2o::SE3Quat(curr_->T_c_w_.rotation_matrix(), curr_->T_c_w_.translation()));

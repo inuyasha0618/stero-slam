@@ -3,6 +3,7 @@
 
 #include "myslam/common_include.h"
 #include "myslam/frame.h"
+#include "myslam/mappoint.h"
 
 namespace myslam {
     class Frame;
