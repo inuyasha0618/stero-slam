@@ -48,6 +48,8 @@ namespace myslam {
     }
 
     void Backend::doLocalBA() {
+
+        const float delta = sqrt(5.991);
         g2o::SparseOptimizer optimizer;
         g2o::BlockSolverX::LinearSolverType *linearSolver;
         linearSolver = new g2o::LinearSolverEigen<g2o::BlockSolverX::PoseMatrixType>();
@@ -55,17 +57,85 @@ namespace myslam {
         g2o::OptimizationAlgorithmLevenberg *solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
         optimizer.setAlgorithm(solver);
 
-        // 窗口内的关键帧设为g2o顶点
-        for (shared_ptr<Frame> frame: kfWindow_) {
+        // 窗口内的关键帧设为g2o顶点, 并添加进去
+        int maxFrameVertexId = 0; // 帮助下面的地图点vertex往下排序号
+        for (int i = 0; i < kfWindow_.size(); i++) {
+            shared_ptr<Frame> frame = kfWindow_[i];
             g2o::VertexSE3Expmap* frameVertex = new g2o::VertexSE3Expmap();
             frameVertex->setId(frame->id_);
+
+            if (frame->id_ > maxFrameVertexId) {
+                maxFrameVertexId = frame->id_;
+            }
+
             frameVertex->setEstimate(g2o::SE3Quat(frame->T_c_w_.rotation_matrix(), frame->T_c_w_.translation()));
             // 窗口的第一帧是久经优化的了，所以当它成为窗口第一帧时是不需要优化的，也给其他帧提供了参照
-            if (frame == kfWindow_.front()) {
+            if (i == 0) {
                 frameVertex->setFixed(true);
             }
 
             optimizer.addVertex(frameVertex);
         }
+
+        // 添加地图点pos顶点
+        int mpIdx = 0;
+        for (shared_ptr<MapPoint> mp: localMap_) {
+            if (mp == nullptr) {
+                continue;
+            }
+
+            g2o::VertexSBAPointXYZ* pointVertex = new g2o::VertexSBAPointXYZ();
+            pointVertex->setId(maxFrameVertexId + 1 + mpIdx);
+            mpIdx++;
+            pointVertex->setEstimate(mp->getWorldPos());
+            pointVertex->setMarginalized(true);
+
+            // Todo 把被观测到两次及以上的地图点才加入优化，当前先把所有地图点都加入优化
+            // 不能急着加入该点，因为该点可能已经不能被窗口内的帧所观测到了
+//            optimizer.addVertex(pointVertex);
+
+            // 依据该点的观测添加边
+            // 该点被观测到的次数
+            int observedTimes = 0, edgeId = 0;
+            for (auto &obs: mp->observations_) {
+                auto f = obs.first;
+                if (f.expired()) {
+                    continue;
+                }
+
+                observedTimes++;
+                shared_ptr<Frame> frame = f.lock();
+
+                // 找到在该帧当中相应的feature
+                shared_ptr<Feature> relativeFeat = frame->leftFeatures_[obs.second];
+
+                // 创建一条边
+                EdgeProjXYZ2UV* edge = new EdgeProjXYZ2UV();
+                edge->setId(edgeId++);
+                edge->setVertex(0, pointVertex);
+                edge->setVertex(1, optimizer.vertex(frame->id_));
+                edge->setMeasurement(relativeFeat->pixel_);
+                edge->camera_ = frame->camera_.get();
+                edge->setInformation(Eigen::Matrix2d::Identity());
+
+                g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber();
+                edge->setRobustKernel( rk );
+                rk->setDelta( delta );
+
+                optimizer.addEdge(edge);
+            }
+
+            // 如果改点在窗口帧当中有被观测到，则添加这个顶点，否则删除之
+            if (observedTimes > 0) {
+                optimizer.addVertex(pointVertex);
+            } else {
+                delete pointVertex;
+            }
+        }
+
+        optimizer.initializeOptimization(0);
+        optimizer.optimize(5);
+
+        // Todo 优化完毕， 需要根据优化的结果更新相应的关键帧及地图点的坐标
     }
 }

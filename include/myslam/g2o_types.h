@@ -37,6 +37,19 @@ namespace myslam
         Camera* camera_;
     };
 
+    class EdgeProjXYZ2UV: public g2o::BaseBinaryEdge<2, Eigen::Vector2d, g2o::VertexSBAPointXYZ, g2o::VertexSE3Expmap>
+    {
+    public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        virtual void computeError();
+        virtual void linearizeOplus();
+
+        virtual bool read(std::istream& in) {}
+        virtual bool write(std::ostream& os) const {}
+
+        Camera* camera_;
+    };
+
     class EdgeProjXYZ2SteroUVPoseOnly: public g2o::BaseUnaryEdge<3, Eigen::Vector3d, g2o::VertexSE3Expmap>
     {
     public:

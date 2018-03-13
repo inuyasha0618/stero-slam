@@ -32,6 +32,11 @@ namespace myslam
         ObsMap observations_;
 
         void addObservation(shared_ptr<Frame> keyFrame, size_t index);
+
+        Eigen::Vector3d getWorldPos() {
+            // Todo 看看是否需要加锁
+            return pos_;
+        }
     };
 }
 

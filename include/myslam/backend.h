@@ -4,6 +4,7 @@
 #include "myslam/common_include.h"
 #include "myslam/frame.h"
 #include "myslam/mappoint.h"
+#include "myslam/g2o_types.h"
 
 namespace myslam {
     class Frame;

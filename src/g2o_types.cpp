@@ -2,6 +2,7 @@
 
 namespace myslam
 {
+    //***************************EdgeProjXYZ2UVPoseOnly相关*****************************************
     void EdgeProjXYZ2UVPoseOnly::computeError() {
         const g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[0]);
         _error = _measurement - camera_->camera2pixel(pose->estimate().map(point_));
@@ -32,6 +33,52 @@ namespace myslam
         _jacobianOplusXi ( 1,4 ) = -1./z *fy;
         _jacobianOplusXi ( 1,5 ) = y/z_2 *fy;
     }
+
+    //*************************EdgeProjXYZ2UV相关******************************************
+
+    void EdgeProjXYZ2UV::computeError() {
+        const g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[1]);
+        const g2o::VertexSBAPointXYZ* point = static_cast<g2o::VertexSBAPointXYZ*>(_vertices[0]);
+        _error = _measurement - camera_->camera2pixel(pose->estimate().map(point->estimate()));
+    }
+
+    void EdgeProjXYZ2UV::linearizeOplus() {
+        double fx = camera_->fx_;
+        double fy = camera_->fy_;
+
+        const g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[1]);
+        const g2o::VertexSBAPointXYZ* point = static_cast<g2o::VertexSBAPointXYZ*>(_vertices[0]);
+
+        Eigen::Vector3d xyz_trans = pose->estimate().map(point->estimate());
+        double x = xyz_trans[0];
+        double y = xyz_trans[1];
+        double z = xyz_trans[2];
+        double z_2 = z*z;
+
+        _jacobianOplusXi ( 0,0 ) = -fx / z;
+        _jacobianOplusXi ( 0,1 ) = 0;
+        _jacobianOplusXi ( 0,2 ) = fx * x / z_2;
+
+        _jacobianOplusXi ( 1,0 ) = 0;
+        _jacobianOplusXi ( 1,1 ) = -fy / z;
+        _jacobianOplusXi ( 1,2 ) = fy * y / z_2;
+
+        _jacobianOplusXj ( 0,0 ) =  x*y/z_2 *fx;
+        _jacobianOplusXj ( 0,1 ) = - ( 1+ ( x*x/z_2 ) ) *fx;
+        _jacobianOplusXj ( 0,2 ) = y/z * fx;
+        _jacobianOplusXj ( 0,3 ) = -1./z * fx;
+        _jacobianOplusXj ( 0,4 ) = 0;
+        _jacobianOplusXj ( 0,5 ) = x/z_2 * fx;
+
+        _jacobianOplusXj ( 1,0 ) = ( 1+y*y/z_2 ) *fy;
+        _jacobianOplusXj ( 1,1 ) = -x*y/z_2 *fy;
+        _jacobianOplusXj ( 1,2 ) = -x/z *fy;
+        _jacobianOplusXj ( 1,3 ) = 0;
+        _jacobianOplusXj ( 1,4 ) = -1./z *fy;
+        _jacobianOplusXj ( 1,5 ) = y/z_2 *fy;
+    }
+
+    //*************************************************************************************
 
     void EdgeProjXYZ2SteroUVPoseOnly::linearizeOplus() {
 
