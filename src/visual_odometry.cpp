@@ -290,8 +290,9 @@ namespace myslam
             }
         }
 
-        curr_->T_c_w_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
-
+//        curr_->T_c_w_ = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
+        Sophus::SE3 Tcw = Sophus::SE3(pose->estimate().rotation(), pose->estimate().translation());
+        curr_->setPose(Tcw);
     }
 
     int VisualOdometry::cleanBadFeatures() {
@@ -323,7 +324,8 @@ namespace myslam
             return false;
         }
 
-        T_c_r_esti_ = curr_->T_c_w_ * ref_->T_c_w_.inverse();
+//        T_c_r_esti_ = curr_->T_c_w_ * ref_->T_c_w_.inverse();
+        T_c_r_esti_ = curr_->getPose() * ref_->getPose().inverse();
 
         Sophus::Vector6d tcr_vec = T_c_r_esti_.log();
         if (tcr_vec.norm() > 5.0) {
@@ -334,7 +336,8 @@ namespace myslam
     }
 
     bool VisualOdometry::checkKeyFrame() {
-        Sophus::SE3 Trc = lastKeyFrame_->T_c_w_ * curr_->T_c_w_.inverse();
+//        Sophus::SE3 Trc = lastKeyFrame_->T_c_w_ * curr_->T_c_w_.inverse();
+        Sophus::SE3 Trc = lastKeyFrame_->getPose() * curr_->getPose().inverse();
 
         Sophus::Vector6d trc_vec = Trc.log();
 //        Eigen::Vector3d trans = trc_vec.head<3>();
@@ -450,8 +453,9 @@ namespace myslam
             shared_ptr<MapPoint> mapPoint(new MapPoint);
             float depth = 1.0 / feature->invDepth_;
             Eigen::Vector3d Pc = frame->camera_->pixel2camera(feature->pixel_, depth);
-            mapPoint->pos_ =  frame->T_c_w_.inverse() * Pc;
-
+//            mapPoint->pos_ =  frame->T_c_w_.inverse() * Pc;
+            Eigen::Vector3d pos = frame->T_c_w_.inverse() * Pc;
+            mapPoint->setWorldPos(pos);
             // 将mapPoint与feature关联上
             feature->mapPoint_ = mapPoint;
         }

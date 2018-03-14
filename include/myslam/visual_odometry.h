@@ -7,7 +7,6 @@
 #include "myslam/feature.h"
 #include "myslam/settings.h"
 #include "myslam/backend.h"
-
 #include <opencv2/features2d/features2d.hpp>
 
 namespace myslam

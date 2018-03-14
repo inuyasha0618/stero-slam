@@ -55,13 +55,11 @@ namespace myslam
         double z = xyz_trans[2];
         double z_2 = z*z;
 
-        _jacobianOplusXi ( 0,0 ) = -fx / z;
-        _jacobianOplusXi ( 0,1 ) = 0;
-        _jacobianOplusXi ( 0,2 ) = fx * x / z_2;
+        Eigen::Matrix<double , 2, 3> de_dxc;
+        de_dxc << -fx / z, 0, fx * x / z_2, 0, -fy / z, fy * y / z_2;
+        Eigen::Matrix3d dxc_dxw = pose->estimate().rotation().toRotationMatrix();
 
-        _jacobianOplusXi ( 1,0 ) = 0;
-        _jacobianOplusXi ( 1,1 ) = -fy / z;
-        _jacobianOplusXi ( 1,2 ) = fy * y / z_2;
+        _jacobianOplusXi = de_dxc * dxc_dxw;
 
         _jacobianOplusXj ( 0,0 ) =  x*y/z_2 *fx;
         _jacobianOplusXj ( 0,1 ) = - ( 1+ ( x*x/z_2 ) ) *fx;

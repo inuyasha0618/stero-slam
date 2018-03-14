@@ -1,3 +1,6 @@
+#ifndef G2O_TYPES_H
+#define G2O_TYPES_H
+
 #include "myslam/common_include.h"
 #include "myslam/camera.h"
 
@@ -119,3 +122,5 @@ namespace myslam
     };
 
 }
+
+#endif

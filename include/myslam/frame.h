@@ -24,6 +24,7 @@ namespace myslam
         vector<shared_ptr<Feature>> leftFeatures_;                // 左视图的features
         vector<vector<size_t>> frame_grid_;         // 把grid拉平，　每个格子里存放一个vector，里面是在这个格子里的feature的序号
 
+        mutex mutexPose;
     public:
         Frame();
 
@@ -42,6 +43,16 @@ namespace myslam
         bool posInGrid(const shared_ptr<Feature> feature, int &posX, int &posY);
 
         void assignFeaturesToGrid();
+
+        void setPose(Sophus::SE3 &Tcw) {
+            unique_lock<mutex> lock(mutexPose);
+            T_c_w_ = Tcw;
+        }
+
+        Sophus::SE3 getPose() {
+            unique_lock<mutex> lock(mutexPose);
+            return T_c_w_;
+        }
     };
 }
 

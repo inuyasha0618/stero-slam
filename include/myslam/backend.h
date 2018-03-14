@@ -31,6 +31,8 @@ namespace myslam {
         mutex mutexNewKfs;
         shared_ptr<Frame> currFrame_; // 正在处理的帧（也可理解为最新的一帧）
         void doLocalBA(); // 局部地图 + 窗口内的关键帧做一次Bundle Adjustment
+
+        void cleanMapPoints();
     };
 }
 #endif

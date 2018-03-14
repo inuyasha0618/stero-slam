@@ -47,6 +47,10 @@ namespace myslam {
         }
     }
 
+    void Backend::cleanMapPoints() {
+
+    }
+
     void Backend::doLocalBA() {
 
         const float delta = sqrt(5.991);
@@ -56,6 +60,9 @@ namespace myslam {
         g2o::BlockSolverX *solver_ptr = new g2o::BlockSolverX(linearSolver);
         g2o::OptimizationAlgorithmLevenberg *solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
         optimizer.setAlgorithm(solver);
+
+//        map<int, string> map1;
+        // Todo 看看其他地方的vector需要reserve开辟一下空间不？
 
         // 窗口内的关键帧设为g2o顶点, 并添加进去
         int maxFrameVertexId = 0; // 帮助下面的地图点vertex往下排序号
@@ -79,13 +86,22 @@ namespace myslam {
 
         // 添加地图点pos顶点
         int mpIdx = 0;
+        vector<int> validPointVertexIdx;
+        vector<shared_ptr<MapPoint>> validPoints;
+
+        validPointVertexIdx.reserve(localMap_.size());
+        validPoints.reserve(localMap_.size());
+
         for (shared_ptr<MapPoint> mp: localMap_) {
             if (mp == nullptr) {
                 continue;
             }
 
             g2o::VertexSBAPointXYZ* pointVertex = new g2o::VertexSBAPointXYZ();
-            pointVertex->setId(maxFrameVertexId + 1 + mpIdx);
+
+            int currIdx = maxFrameVertexId + 1 + mpIdx;
+
+            pointVertex->setId(currIdx);
             mpIdx++;
             pointVertex->setEstimate(mp->getWorldPos());
             pointVertex->setMarginalized(true);
@@ -101,6 +117,13 @@ namespace myslam {
                 auto f = obs.first;
                 if (f.expired()) {
                     continue;
+                }
+
+                if (observedTimes == 0) {
+                    optimizer.addVertex(pointVertex);
+
+                    validPoints.push_back(mp);
+                    validPointVertexIdx.push_back(currIdx);
                 }
 
                 observedTimes++;
@@ -121,14 +144,13 @@ namespace myslam {
                 g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber();
                 edge->setRobustKernel( rk );
                 rk->setDelta( delta );
-
+                cout << "addEdge之前" << endl;
                 optimizer.addEdge(edge);
+                cout << "addEdge之后" << endl;
             }
 
             // 如果改点在窗口帧当中有被观测到，则添加这个顶点，否则删除之
-            if (observedTimes > 0) {
-                optimizer.addVertex(pointVertex);
-            } else {
+            if (observedTimes == 0) {
                 delete pointVertex;
             }
         }
@@ -137,5 +159,20 @@ namespace myslam {
         optimizer.optimize(5);
 
         // Todo 优化完毕， 需要根据优化的结果更新相应的关键帧及地图点的坐标
+        // 更新窗口内的关键帧的位姿
+        for (shared_ptr<Frame> frame: kfWindow_) {
+            g2o::VertexSE3Expmap* frameVertex = (g2o::VertexSE3Expmap*)optimizer.vertex(frame->id_);
+            Sophus::SE3 Tcw = Sophus::SE3(frameVertex->estimate().rotation(), frameVertex->estimate().translation());
+            frame->setPose(Tcw);
+        }
+
+        // Todo 更新局部地图地图点的世界坐标
+        for (int i = 0; i < validPoints.size(); i++) {
+            shared_ptr<MapPoint> mp = validPoints[i];
+            int vertexIdx = validPointVertexIdx[i];
+
+            g2o::VertexSBAPointXYZ* pointVertex = (g2o::VertexSBAPointXYZ*)optimizer.vertex(vertexIdx);
+            mp->setWorldPos(pointVertex->estimate());
+        }
     }
 }
