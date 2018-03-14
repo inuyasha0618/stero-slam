@@ -63,16 +63,20 @@ namespace myslam
 
                     stereoMatching(curr_);
                     addStereoMapPoints(curr_);
-                }
 
-                bool checkRes = checkEstimatedPose();
-                cout << "checkRes: " << checkRes << endl;
-
-                if (checkKeyFrame()) {
                     myBackend_->insertKeyFrame(curr_);
                     cout << curr_->imgPath << "是关键帧" << endl;
                     lastKeyFrame_ = curr_;
                 }
+
+//                bool checkRes = checkEstimatedPose();
+//                cout << "checkRes: " << checkRes << endl;
+
+//                if (checkKeyFrame()) {
+//                    myBackend_->insertKeyFrame(curr_);
+//                    cout << curr_->imgPath << "是关键帧" << endl;
+//                    lastKeyFrame_ = curr_;
+//                }
                 ref_ = curr_;
 //                if (checkRes) {
 //                    //　本帧就算弄完了，把它变成参考帧，供下个帧使用
@@ -107,7 +111,9 @@ namespace myslam
 
         for (int i = 0; i < ref_->leftFeatures_.size(); i++) {
             auto& feature = ref_->leftFeatures_[i];
-            if (feature == nullptr)
+
+            // Todo 我认为
+            if (feature == nullptr || feature->mapPoint_ == nullptr)
                 continue;
             ref_points.push_back(cv::Point2f(feature->pixel_[0], feature->pixel_[1]));
             validRefFeatIdx.push_back(i);
@@ -119,8 +125,6 @@ namespace myslam
         cv::calcOpticalFlowPyrLK(ref_->img_left_, curr_->img_left_, ref_points, curr_points, status, err);
 
         cv::findFundamentalMat(ref_points, curr_points, cv::FM_RANSAC, 3.0, 0.99, status);
-
-        cout << "ref_points size: " << ref_points.size() << "curr_points size: " << curr_points.size() << endl;
 
 //        vector<cv::DMatch> matches;
 //        vector<cv::KeyPoint> kps_ref, kps_curr;
@@ -171,11 +175,6 @@ namespace myslam
         vector<cv::Point3f> pts3d;
         vector<cv::Point2f> pts2d;
 
-        for (cv::DMatch match : features_matches_) {
-            pts3d.push_back(pts_3d_ref_[match.queryIdx]);
-            pts2d.push_back(keypoints_curr_[match.trainIdx].pt);
-        }
-
         for (auto feature: curr_->leftFeatures_) {
             if (feature == nullptr || feature->mapPoint_ == nullptr)
                 continue;
@@ -191,10 +190,11 @@ namespace myslam
                 0, 0, 1.0);
         cv::Mat rvec, tvec, inliers;
         cv::solvePnPRansac(pts3d, pts2d, K, cv::Mat(), rvec, tvec, false, 100, 4.0, 0.99, inliers);
-        curr_->T_c_w_ = Sophus::SE3(
+        Sophus::SE3 tcw = Sophus::SE3(
                 Sophus::SO3(rvec.at<double>(0, 0), rvec.at<double>(1, 0), rvec.at<double>(2, 0)),
                 Eigen::Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0), tvec.at<double>(2, 0))
         );
+        curr_->setPose(tcw);
 
         // 谜之delta
         const float delta = sqrt(5.991);
@@ -307,7 +307,8 @@ namespace myslam
             if (feature->mapPoint_ == nullptr)
                 num_no_mappoint++;
 
-            if (feature->isOutlier_ || feature->mapPoint_ == nullptr) {
+//            if (feature->isOutlier_ || feature->mapPoint_ == nullptr) {
+                if (feature->mapPoint_ == nullptr) {
 //                cout << "bad!!!" << endl;
                 feature = nullptr;
                 continue;

@@ -64,7 +64,7 @@ namespace myslam
         for (size_t i = 0; i < leftFeatures_.size(); i++) {
             int posX, posY;
             shared_ptr<Feature> feature = leftFeatures_[i];
-            if (feature == nullptr)
+            if (feature == nullptr || feature->mapPoint_ == nullptr)
                 continue;
             if (posInGrid(feature, posX, posY)) {
                 frame_grid_[posY * FRAM_GRID_COLS + posX].push_back(i);

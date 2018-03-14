@@ -144,9 +144,7 @@ namespace myslam {
                 g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber();
                 edge->setRobustKernel( rk );
                 rk->setDelta( delta );
-                cout << "addEdge之前" << endl;
                 optimizer.addEdge(edge);
-                cout << "addEdge之后" << endl;
             }
 
             // 如果改点在窗口帧当中有被观测到，则添加这个顶点，否则删除之
